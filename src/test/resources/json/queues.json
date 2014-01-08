@@ -1,0 +1,126 @@
+[
+    {
+        "memory": 11084,
+        "message_stats": {
+            "ack": 644,
+            "ack_details": {
+                "rate": 0.0
+            },
+            "deliver": 644,
+            "deliver_details": {
+                "rate": 0.0
+            },
+            "deliver_get": 644,
+            "deliver_get_details": {
+                "rate": 0.0
+            },
+            "publish": 644,
+            "publish_details": {
+                "rate": 0.0
+            }
+        },
+        "messages": 0,
+        "messages_details": {
+            "rate": 0.0
+        },
+        "messages_ready": 0,
+        "messages_ready_details": {
+            "rate": 0.0
+        },
+        "messages_unacknowledged": 0,
+        "messages_unacknowledged_details": {
+            "rate": 0.0
+        },
+        "idle_since": "2013-12-14 20:09:04",
+        "policy": "",
+        "exclusive_consumer_tag": "",
+        "consumers": 1,
+        "backing_queue_status": {
+            "q1": 0,
+            "q2": 0,
+            "delta": ["delta", 0, 0, 0],
+            "q3": 0,
+            "q4": 0,
+            "len": 0,
+            "pending_acks": 0,
+            "target_ram_count": "infinity",
+            "ram_msg_count": 0,
+            "ram_ack_count": 0,
+            "next_seq_id": 644,
+            "persistent_count": 0,
+            "avg_ingress_rate": 1.8530769416076924,
+            "avg_egress_rate": 1.8530769416076924,
+            "avg_ack_ingress_rate": 1.8530769416076924,
+            "avg_ack_egress_rate": 1.8530769416076924
+        },
+        "status": "running",
+        "name": "queue.user.save",
+        "vhost": "/",
+        "durable": true,
+        "auto_delete": false,
+        "arguments": {},
+        "node": "rabbit@ABEY-WIN7-32"
+    },
+    {
+        "memory": 11084,
+        "message_stats": {
+            "ack": 644,
+            "ack_details": {
+                "rate": 0.0
+            },
+            "deliver": 644,
+            "deliver_details": {
+                "rate": 0.0
+            },
+            "deliver_get": 644,
+            "deliver_get_details": {
+                "rate": 0.0
+            },
+            "publish": 644,
+            "publish_details": {
+                "rate": 0.0
+            }
+        },
+        "messages": 0,
+        "messages_details": {
+            "rate": 0.0
+        },
+        "messages_ready": 0,
+        "messages_ready_details": {
+            "rate": 0.0
+        },
+        "messages_unacknowledged": 0,
+        "messages_unacknowledged_details": {
+            "rate": 0.0
+        },
+        "idle_since": "2013-12-14 20:09:04",
+        "policy": "",
+        "exclusive_consumer_tag": "",
+        "consumers": 1,
+        "backing_queue_status": {
+            "q1": 0,
+            "q2": 0,
+            "delta": ["delta", 0, 0, 0],
+            "q3": 0,
+            "q4": 0,
+            "len": 0,
+            "pending_acks": 0,
+            "target_ram_count": "infinity",
+            "ram_msg_count": 0,
+            "ram_ack_count": 0,
+            "next_seq_id": 644,
+            "persistent_count": 0,
+            "avg_ingress_rate": 1.8530769416076924,
+            "avg_egress_rate": 1.8530769416076924,
+            "avg_ack_ingress_rate": 1.8530769416076924,
+            "avg_ack_egress_rate": 1.8530769416076924
+        },
+        "status": "running",
+        "name": "queue.user.save-2",
+        "vhost": "/",
+        "durable": true,
+        "auto_delete": false,
+        "arguments": {},
+        "node": "rabbit@ABEY-WIN7-32"
+    }
+]
