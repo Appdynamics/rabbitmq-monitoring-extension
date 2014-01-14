@@ -127,11 +127,10 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <url>https://github.com/Appdynamics/rabbitmq-monitoring-extension.git</url>
+            <url>https://github.com/Appdynamics/maven-repo/raw/master/releases</url>
         </repository>
     </repositories>
     <scm>
-        <connection>scm:git:</connection>
+        <connection>scm:git:https://github.com/Appdynamics/rabbitmq-monitoring-extension.git</connection>
     </scm>
-
 </project>
