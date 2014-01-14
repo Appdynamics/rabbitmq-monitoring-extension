@@ -24,4 +24,54 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 <argument name="metricPrefix" is-required="true" default-value="Custom Metrics|RabbitMQ|"/>
 ```
 </pre>
-4. 
+
+##Metrics
+The following metrics are reported
+```
+Custom Metrics|RabbitMQ|Nodes|<host>|Erlang Processes
+Custom Metrics|RabbitMQ|Nodes|<host>|File Descriptors
+Custom Metrics|RabbitMQ|Nodes|<host>|Memory(MB)
+Custom Metrics|RabbitMQ|Nodes|<host>|Sockets
+Custom Metrics|RabbitMQ|Nodes|<host>|Channels|Count
+Custom Metrics|RabbitMQ|Nodes|<host>|Channels|Blocked
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Delivered
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Acknowledged
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Got No-Ack
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Delivered No-Ack
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Redelivered
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Published
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Available
+Custom Metrics|RabbitMQ|Nodes|<host>|Messages|Pending Acknowledgements
+Custom Metrics|RabbitMQ|Nodes|<host>|Consumers|Count
+Custom Metrics|RabbitMQ|Summary|Channels
+Custom Metrics|RabbitMQ|Summary|Consumers
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Consumers
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Acknowledged
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Available
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Delivered (Total)
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Delivered
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Delivered No-Ack
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Got
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Got No-Ack
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Published
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Redelivered
+Custom Metrics|RabbitMQ|Queues|Default|<QName>|Messages|Pending Acknowledgements
+Custom Metrics|RabbitMQ|Summary|Messages|Available
+Custom Metrics|RabbitMQ|Summary|Messages|Delivered (Total)
+Custom Metrics|RabbitMQ|Summary|Messages|Published
+Custom Metrics|RabbitMQ|Summary|Messages|Redelivered
+Custom Metrics|RabbitMQ|Summary|Messages|Pending Acknowledgements
+Custom Metrics|RabbitMQ|Summary|Queues
+```
+##Contributing
+
+Always feel free to fork and contribute any changes directly here on GitHub.
+
+##Community
+
+Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/eXchange/RabbitMQ-Monitoring-Extension/idi-p/5717) community.
+
+##Support
+
+For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
+
