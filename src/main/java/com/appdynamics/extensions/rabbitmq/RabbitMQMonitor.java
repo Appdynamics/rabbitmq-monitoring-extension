@@ -48,6 +48,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
 
     public RabbitMQMonitor() {
+        String msg = "Using Monitor Version ["+getImplementationVersion()+"]";
+        logger.info(msg);
+        System.out.println(msg);
         dictionary = new HashMap<String, String>();
         dictionary.put("ack", "Acknowledged");
         dictionary.put("deliver", "Delivered");
@@ -101,7 +104,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
             for (JsonNode queue : queues) {
                 JsonNode msgStats = queue.get("message_stats");
-                String qName = getStringValue("name", queue, "Default");
+                //Rabbit MQ queue names are case sensitive,
+                // however the controller bombs when there are 2 metrics with same name in different cases.
+                String qName = lower(getStringValue("name", queue, "Default"));
                 String vHost = getStringValue("vhost", queue, "Default");
                 if (vHost.equals("/")) {
                     vHost = "Default";
@@ -127,6 +132,13 @@ public class RabbitMQMonitor extends AManagedMonitor {
         } else {
             printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
         }
+    }
+
+    private String lower(String value) {
+        if(value!=null){
+            return value.toLowerCase();
+        }
+        return value;
     }
 
     /**
@@ -222,19 +234,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 addToMap(valueMap, prop, value);
             }
         }
-        // They uses the active_consumers which I couldnt find in RabbitMQ output
-        // Based on this they calculate idle.
-//        AtomicInteger consumerCount = valueMap.get("consumers");
-//        AtomicInteger activeConsumerCount = valueMap.get("active_consumers");
-//        if (consumerCount != null) {
-//            AtomicInteger idle = new AtomicInteger();
-//            if (activeConsumerCount != null) {
-//                idle.addAndGet(consumerCount.intValue() - activeConsumerCount.intValue());
-//            } else {
-//                idle.addAndGet(consumerCount.intValue());
-//            }
-//            valueMap.put("idle_consumers", idle);
-//        }
         uploadMetricValues(metricPrefix, valueMap);
         //TODO what to do with the count?
     }
@@ -538,5 +537,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
         StringBuilder sb = new StringBuilder();
         sb.append(username).append(":").append(password);
         return Base64Variants.MIME.encode(sb.toString().getBytes());
+    }
+
+    public static String getImplementationVersion(){
+        return RabbitMQMonitor.class.getPackage().getImplementationTitle();
     }
 }
