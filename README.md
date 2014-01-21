@@ -65,6 +65,9 @@ The following metrics are reported. The Metric Path is relative to the "metricPr
 | Summary/Messages/Pending Acknowledgements | The total count of messages with the status 'messages_unacknowledged' in the RabbitMQ server |
 | Summary/Queues | The count of queues in the RabbitMQ Server |
 
+#Custom Dashboard
+![](https://github.com/Appdynamics/rabbitmq-monitoring-extension/raw/master/RabbitMQCustomDashboard.png)
+
 ##Contributing
 
 Always feel free to fork and contribute any changes directly here on GitHub.
