@@ -24,6 +24,7 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 <argument name="metricPrefix" is-required="true" default-value="Custom Metrics|RabbitMQ|"/>
 ```
 </pre>
+4. Add the line "statistics=enabled" to tibemsd.conf
 
 ##Metrics
 The following metrics are reported. The Metric Path is relative to the "metricPrefix" defined in the monitor.xml
