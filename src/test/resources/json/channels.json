@@ -6,15 +6,15 @@
             "peer_host": "192.168.57.1"
         },
         "message_stats": {
-            "ack": 644,
+            "ack": 23,
             "ack_details": {
                 "rate": 0.0
             },
-            "deliver": 644,
+            "deliver": 33,
             "deliver_details": {
                 "rate": 0.0
             },
-            "deliver_get": 644,
+            "deliver_get": 43,
             "deliver_get_details": {
                 "rate": 0.0
             }
@@ -23,10 +23,10 @@
         "transactional": false,
         "confirm": false,
         "consumer_count": 1,
-        "messages_unacknowledged": 0,
-        "messages_unconfirmed": 0,
-        "messages_uncommitted": 0,
-        "acks_uncommitted": 0,
+        "messages_unacknowledged": 53,
+        "messages_unconfirmed": 63,
+        "messages_uncommitted": 73,
+        "acks_uncommitted": 83,
         "prefetch_count": 1,
         "client_flow_blocked": false,
         "node": "rabbit@ABEY-WIN7-32",
@@ -42,15 +42,15 @@
             "peer_host": "192.168.57.1"
         },
         "message_stats": {
-            "ack": 644,
+            "ack": 24,
             "ack_details": {
                 "rate": 0.0
             },
-            "deliver": 644,
+            "deliver": 34,
             "deliver_details": {
                 "rate": 0.0
             },
-            "deliver_get": 644,
+            "deliver_get": 44,
             "deliver_get_details": {
                 "rate": 0.0
             }
@@ -59,10 +59,10 @@
         "transactional": false,
         "confirm": false,
         "consumer_count": 1,
-        "messages_unacknowledged": 0,
-        "messages_unconfirmed": 0,
-        "messages_uncommitted": 0,
-        "acks_uncommitted": 0,
+        "messages_unacknowledged": 54,
+        "messages_unconfirmed": 64,
+        "messages_uncommitted": 74,
+        "acks_uncommitted": 84,
         "prefetch_count": 1,
         "client_flow_blocked": false,
         "node": "rabbit@ABEY-WIN7-32",

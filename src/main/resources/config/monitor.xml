@@ -5,7 +5,7 @@
     <monitor-configuration></monitor-configuration>
     <monitor-run-task>
         <execution-style>periodic</execution-style>
-        <execution-frequency-in-seconds>10</execution-frequency-in-seconds>
+        <execution-frequency-in-seconds>55</execution-frequency-in-seconds>
         <name>RabbitMQ Monitor Run task</name>
         <display-name>RabbitMQ Monitor Run task</display-name>
         <description>RabbitMQ Monitor Run task</description>

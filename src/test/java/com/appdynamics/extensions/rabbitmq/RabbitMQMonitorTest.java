@@ -65,14 +65,38 @@ public class RabbitMQMonitorTest {
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Sockets","3");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Channels|Count","2");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Channels|Blocked","0");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Messages|Delivered","1288");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Messages|Acknowledged","1288");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Consumers|Count","2");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Messages|Delivered",String.valueOf(33+34));
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Messages|Acknowledged",String.valueOf(23+24));
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Consumers|Count","6");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Channels","2");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Consumers","2");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Messages|Delivered (Total)","1288");
-        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Messages|Published","1288");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Consumers","6");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Messages|Delivered (Total)",String.valueOf(30+13));
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Messages|Published",String.valueOf(14+40));
         expectedValueMap.put("Custom Metrics|RabbitMQ|Summary|Queues","2");
+
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Consumers","5");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Available","60");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Pending Acknowledgements","70");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Acknowledged","10");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Delivered (Total)","30");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Delivered","20");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Delivered No-Ack","25");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Got","5");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Got No-Ack","15");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Published","40");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Redelivered","35");
+
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Consumers","1");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Available","16");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Pending Acknowledgements","17");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Acknowledged","11");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Delivered (Total)","13");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Delivered","12");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Delivered No-Ack","26");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Got","6");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Got No-Ack","16");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Published","14");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Redelivered","36");
     }
 
     private Object createMockWriter(final String metricName) {

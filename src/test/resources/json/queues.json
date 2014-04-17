@@ -2,39 +2,44 @@
     {
         "memory": 11084,
         "message_stats": {
-            "ack": 644,
+            "ack": 10,
             "ack_details": {
                 "rate": 0.0
             },
-            "deliver": 644,
+            "deliver": 20,
             "deliver_details": {
                 "rate": 0.0
             },
-            "deliver_get": 644,
+            "deliver_get": 30,
             "deliver_get_details": {
                 "rate": 0.0
             },
-            "publish": 644,
+            "publish": 40,
             "publish_details": {
                 "rate": 0.0
-            }
+            },
+            "get": 5,
+            "get_no_ack": 15,
+            "deliver_no_ack": 25,
+            "redeliver": 35
+
         },
-        "messages": 0,
+        "messages": 50,
         "messages_details": {
             "rate": 0.0
         },
-        "messages_ready": 0,
+        "messages_ready": 60,
         "messages_ready_details": {
             "rate": 0.0
         },
-        "messages_unacknowledged": 0,
+        "messages_unacknowledged": 70,
         "messages_unacknowledged_details": {
             "rate": 0.0
         },
         "idle_since": "2013-12-14 20:09:04",
         "policy": "",
         "exclusive_consumer_tag": "",
-        "consumers": 1,
+        "consumers": 5,
         "backing_queue_status": {
             "q1": 0,
             "q2": 0,
@@ -64,32 +69,36 @@
     {
         "memory": 11084,
         "message_stats": {
-            "ack": 644,
+            "ack": 11,
             "ack_details": {
                 "rate": 0.0
             },
-            "deliver": 644,
+            "deliver": 12,
             "deliver_details": {
                 "rate": 0.0
             },
-            "deliver_get": 644,
+            "deliver_get": 13,
             "deliver_get_details": {
                 "rate": 0.0
             },
-            "publish": 644,
+            "publish": 14,
             "publish_details": {
                 "rate": 0.0
-            }
+            },
+            "get": 6,
+            "get_no_ack": 16,
+            "deliver_no_ack": 26,
+            "redeliver": 36
         },
-        "messages": 0,
+        "messages": 15,
         "messages_details": {
             "rate": 0.0
         },
-        "messages_ready": 0,
+        "messages_ready": 16,
         "messages_ready_details": {
             "rate": 0.0
         },
-        "messages_unacknowledged": 0,
+        "messages_unacknowledged": 17,
         "messages_unacknowledged_details": {
             "rate": 0.0
         },

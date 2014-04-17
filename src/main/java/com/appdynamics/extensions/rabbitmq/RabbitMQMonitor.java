@@ -17,7 +17,6 @@ import java.math.BigInteger;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,13 +41,15 @@ public class RabbitMQMonitor extends AManagedMonitor {
     //Items in Nodes|<node>|Consumers - data looked up from /api/queues
     private List<String> queueNodeProps = Arrays.asList("consumers");
     //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues
-    private List<String> queueMessageProps = Arrays.asList("ack", "messages_ready", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver", "messages_unacknowledged");
+    private List<String> queueMessageProps = Arrays.asList("messages_ready", "messages_unacknowledged");
+    //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats
+    private List<String> queueMessageStatsProps = Arrays.asList("ack", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver");
     //Items in Summary|Messages - data looked up from /api/queues
     private List<String> queueSummaryProps = Arrays.asList("messages_ready", "deliver_get", "publish", "redeliver", "messages_unacknowledged");
 
 
     public RabbitMQMonitor() {
-        String msg = "Using Monitor Version ["+getImplementationVersion()+"]";
+        String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
         logger.info(msg);
         System.out.println(msg);
         dictionary = new HashMap<String, String>();
@@ -103,7 +104,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
         if (queues != null) {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
             for (JsonNode queue : queues) {
-                JsonNode msgStats = queue.get("message_stats");
                 //Rabbit MQ queue names are case sensitive,
                 // however the controller bombs when there are 2 metrics with same name in different cases.
                 String qName = lower(getStringValue("name", queue, "Default"));
@@ -116,6 +116,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
                 String msgPrefix = prefix + "|Messages|";
                 for (String prop : queueMessageProps) {
+                    BigInteger value = getBigIntegerValue(prop, queue, 0);
+                    printCollectiveObservedCurrent(msgPrefix + getPropDesc(prop), value);
+                    addToMap(valueMap, prop, value);
+                }
+
+                //These are from message_stats
+                JsonNode msgStats = queue.get("message_stats");
+                for (String prop : queueMessageStatsProps) {
                     BigInteger value = getBigIntegerValue(prop, msgStats, 0);
                     printCollectiveObservedCurrent(msgPrefix + getPropDesc(prop), value);
                     addToMap(valueMap, prop, value);
@@ -135,7 +143,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     }
 
     private String lower(String value) {
-        if(value!=null){
+        if (value != null) {
             return value.toLowerCase();
         }
         return value;
@@ -389,9 +397,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
      */
     protected Map<String, String> checkArgs(Map<String, String> argsMapsActual) {
         Map<String, String> newArgsMap;
-        if(argsMapsActual!=null){
+        if (argsMapsActual != null) {
             newArgsMap = new HashMap<String, String>(argsMapsActual);
-        } else{
+        } else {
             newArgsMap = new HashMap<String, String>();
         }
         if (newArgsMap.get("username") == null) {
@@ -425,7 +433,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
     }
 
     /**
-     *
      * @param urlStr
      * @param encodedUserPass
      * @return
@@ -539,7 +546,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         return Base64Variants.MIME.encode(sb.toString().getBytes());
     }
 
-    public static String getImplementationVersion(){
+    public static String getImplementationVersion() {
         return RabbitMQMonitor.class.getPackage().getImplementationTitle();
     }
 }
