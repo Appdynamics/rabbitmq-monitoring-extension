@@ -11,11 +11,14 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 
+import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,7 +33,9 @@ import java.util.regex.Pattern;
 public class RabbitMQMonitor extends AManagedMonitor {
     public static final Logger logger = Logger.getLogger("com.singularity.extensions.RabbitMQMonitor");
     public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
+    public static final String PERMISSIVE_SSL_FLAG = "false";
 
+    private String permissiveSSL = PERMISSIVE_SSL_FLAG;
     private String metricPrefix = DEFAULT_METRIC_PREFIX;
     //Holds the Key-Description Mapping
     private Map<String, String> dictionary;
@@ -417,6 +422,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
         if (newArgsMap.get("useSSL") == null) {
             newArgsMap.put("useSSL", "false");
         }
+        if(newArgsMap.get("permissiveSSL") == null) {
+            newArgsMap.put("permissiveSSL", PERMISSIVE_SSL_FLAG);
+        } else if (newArgsMap.get("permissiveSSL").equals("true")) {
+            disableCertificateValidation();
+        }
         String prefix = newArgsMap.get("metricPrefix");
         if (prefix == null) {
             newArgsMap.put("metricPrefix", DEFAULT_METRIC_PREFIX);
@@ -462,6 +472,31 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 }
             }
         }
+    }
+
+    public static void disableCertificateValidation() {
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[] {
+                new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                }};
+
+        // Ignore differences between given hostname and certificate hostname
+        HostnameVerifier hv = new HostnameVerifier() {
+            public boolean verify(String hostname, SSLSession session) { return true; }
+        };
+
+        // Install the all-trusting trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier(hv);
+        } catch (Exception e) {}
     }
 
     public void printMetric(String metricName, BigInteger metricValue, String aggregation, String timeRollup, String cluster) {

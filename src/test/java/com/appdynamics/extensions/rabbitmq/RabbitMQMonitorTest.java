@@ -128,6 +128,7 @@ public class RabbitMQMonitorTest {
         Assert.assertEquals("15672",map.get("port"));
         Assert.assertEquals("false",map.get("useSSL"));
         Assert.assertEquals("Custom Metrics|RabbitMQ|",map.get("metricPrefix"));
+        Assert.assertEquals("false", map.get("permissiveSSL"));
 
         Map<String,String> argsMap = new HashMap<String, String>();
         argsMap.put("username", "userx");
@@ -136,6 +137,7 @@ public class RabbitMQMonitorTest {
         argsMap.put("port", "15672x");
         argsMap.put("useSSL", "falsex");
         argsMap.put("metricPrefix", "X|Custom Metrics|RabbitMQ|");
+        argsMap.put("permissiveSSL", "true");
         map = rabbitMonitor.checkArgs(argsMap);
         Assert.assertEquals("userx",map.get("username"));
         Assert.assertEquals("passwordx",map.get("password"));
@@ -143,6 +145,7 @@ public class RabbitMQMonitorTest {
         Assert.assertEquals("15672x",map.get("port"));
         Assert.assertEquals("falsex",map.get("useSSL"));
         Assert.assertEquals("X|Custom Metrics|RabbitMQ|",map.get("metricPrefix"));
+        Assert.assertEquals("true", map.get("permissiveSSL"));
     }
 
     public static void main(String[] args) {
