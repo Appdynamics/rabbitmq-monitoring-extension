@@ -4,7 +4,7 @@
 
     <groupId>com.appdynamics.extensions</groupId>
     <artifactId>rabbitmq-monitoring-extension</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
     <name>rabbitmq-monitoring-extension</name>
     <url>http://maven.apache.org</url>
