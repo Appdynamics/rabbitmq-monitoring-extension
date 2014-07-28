@@ -22,6 +22,9 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 <argument name="username" is-required="true" default-value="guest"/>
 <argument name="password" is-required="true" default-value="guest"/>
 <argument name="metricPrefix" is-required="true" default-value="Custom Metrics|RabbitMQ|"/>
+
+/** The following setting allows ALL ssl certificates if set to true. Use with cation **/
+<argument name="permissiveSSL" is-required="true" default-value="false"/>
 ```
 </pre>
 
