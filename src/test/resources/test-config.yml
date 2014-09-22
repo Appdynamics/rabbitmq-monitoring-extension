@@ -1,0 +1,4 @@
+# Queue Group Configuration
+- groupName: group1
+  queueNameRegex: queue.+
+  showIndividualStats: false

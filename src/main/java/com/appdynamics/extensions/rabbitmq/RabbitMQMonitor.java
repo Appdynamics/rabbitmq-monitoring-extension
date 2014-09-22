@@ -1,5 +1,10 @@
 package com.appdynamics.extensions.rabbitmq;
 
+import com.appdynamics.extensions.ArgumentsValidator;
+import com.appdynamics.extensions.PathResolver;
+import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.appdynamics.extensions.util.FileWatcher;
+import com.appdynamics.extensions.yml.YmlReader;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
@@ -11,6 +16,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -28,10 +34,14 @@ import java.util.regex.Pattern;
  * To change this template use File | Settings | File Templates.
  */
 public class RabbitMQMonitor extends AManagedMonitor {
-    public static final Logger logger = Logger.getLogger("com.singularity.extensions.RabbitMQMonitor");
+    public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitor");
     public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
 
     private String metricPrefix = DEFAULT_METRIC_PREFIX;
+    private static final Map<String, String> defaultArgs = new HashMap<String, String>() {{
+        put("config-file", "monitors/RabbitMQMonitor/config.yml");
+    }};
+
     //Holds the Key-Description Mapping
     private Map<String, String> dictionary;
     //Items in Nodes|<node>|Messages - data looked up from /api/channels
@@ -47,6 +57,8 @@ public class RabbitMQMonitor extends AManagedMonitor {
     //Items in Summary|Messages - data looked up from /api/queues
     private List<String> queueSummaryProps = Arrays.asList("messages_ready", "deliver_get", "publish", "redeliver", "messages_unacknowledged");
 
+    private boolean initialized;
+    protected QueueGroup[] queueGroups;
 
     public RabbitMQMonitor() {
         String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
@@ -68,8 +80,32 @@ public class RabbitMQMonitor extends AManagedMonitor {
         dictionary.put("idle_consumers", "Idle");
     }
 
+    private void configure(Map<String, String> argsMap) {
+        logger.info("Initializing the RabbitMQ Configuration");
+        final File file = PathResolver.getFile(argsMap.get("config-file"), AManagedMonitor.class);
+        if (file != null && file.exists()) {
+            queueGroups = YmlReader.readFromFile(file, QueueGroup[].class);
+        } else {
+            logger.warn("The config file is not present at " + argsMap.get("config-file"));
+        }
+        if (file != null) {
+            //Create a File watcher to auto reload the config
+            FileWatcher.watch(file, new FileWatcher.FileChangeListener() {
+                public void fileChanged() {
+                    logger.info("The file " + file.getAbsolutePath() + " has changed, reloading the config");
+                    queueGroups = YmlReader.readFromFile(file, QueueGroup[].class);
+                }
+            });
+        }
+        initialized = true;
+    }
+
 
     public TaskOutput execute(Map<String, String> argsMap, TaskExecutionContext executionContext) throws TaskExecutionException {
+        argsMap = ArgumentsValidator.validateArguments(argsMap, defaultArgs);
+        if (!initialized) {
+            configure(argsMap);
+        }
         logger.info("Starting the RabbitMQ Metric Monitoring task");
         try {
             argsMap = checkArgs(argsMap);
@@ -103,6 +139,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private void parseQueueData(ArrayNode queues) {
         if (queues != null) {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+            GroupStatTracker tracker = new GroupStatTracker(queueGroups);
             for (JsonNode queue : queues) {
                 //Rabbit MQ queue names are case sensitive,
                 // however the controller bombs when there are 2 metrics with same name in different cases.
@@ -111,21 +148,36 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 if (vHost.equals("/")) {
                     vHost = "Default";
                 }
+                GroupStat groupStat = tracker.getGroupStat(vHost, qName);
+                boolean showIndividualStats = groupStat.isShowIndividualStats();
                 String prefix = "Queues|" + vHost + "|" + qName;
+                String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName();
                 BigInteger consumers = getBigIntegerValue("consumers", queue, 0);
-                printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
+                if (showIndividualStats) {
+                    printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
+                }
+                groupStat.add(groupPrefix + "|Consumers", consumers);
                 String msgPrefix = prefix + "|Messages|";
+                String grpMsgPrefix = groupPrefix + "|Messages|";
                 for (String prop : queueMessageProps) {
                     BigInteger value = getBigIntegerValue(prop, queue, 0);
-                    printCollectiveObservedCurrent(msgPrefix + getPropDesc(prop), value);
+                    String metricName = getPropDesc(prop);
+                    if (showIndividualStats) {
+                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
+                    }
+                    groupStat.add(grpMsgPrefix + metricName, value);
                     addToMap(valueMap, prop, value);
                 }
 
-                //These are from message_stats
+                //Fetch data from message_stats object
                 JsonNode msgStats = queue.get("message_stats");
                 for (String prop : queueMessageStatsProps) {
                     BigInteger value = getBigIntegerValue(prop, msgStats, 0);
-                    printCollectiveObservedCurrent(msgPrefix + getPropDesc(prop), value);
+                    String metricName = getPropDesc(prop);
+                    if (showIndividualStats) {
+                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
+                    }
+                    groupStat.add(grpMsgPrefix + metricName, value);
                     addToMap(valueMap, prop, value);
                 }
             }
@@ -137,6 +189,17 @@ public class RabbitMQMonitor extends AManagedMonitor {
             }
             //Total Number of Queues
             printCollectiveObservedCurrent("Summary|Queues", new BigInteger(String.valueOf(queues.size())));
+
+            //Print the regex queue group metrics
+            Collection<GroupStat> groupStats = tracker.getGroupStats();
+            if (groupStats != null) {
+                for (GroupStat groupStat : groupStats) {
+                    Map<String, BigInteger> groupValMap = groupStat.getValueMap();
+                    for (String metric : groupValMap.keySet()) {
+                        printCollectiveObservedCurrent(metric, groupValMap.get(metric));
+                    }
+                }
+            }
         } else {
             printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
         }
