@@ -1,4 +1,15 @@
-# Queue Group Configuration
+############
+## Queue Group Configuration. The queue stats will be grouped by the 'groupName'
+## if the 'queueNameRegex' matches the name of the Queue.
+
+## groupName            The stats from Queues matched by the 'queueNameRegex' will be reported under this name
+## queueNameRegex       A Regex to match the Queue Name
+## showIndividualStats  If set to false then the Individual Queue stats will not be reported.
+##                      This will help if there are several short lived queues and an explosion of metrics
+##                      in the controller can be avoided
+############
+
+# Uncomment the following lines for configuration
 #- groupName: group1
 #  queueNameRegex: queue.+
 #  showIndividualStats: false

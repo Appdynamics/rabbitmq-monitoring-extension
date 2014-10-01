@@ -1,7 +1,11 @@
 package com.appdynamics.extensions.rabbitmq;
 
+import com.appdynamics.TaskInputArgs;
 import com.appdynamics.extensions.ArgumentsValidator;
 import com.appdynamics.extensions.PathResolver;
+import com.appdynamics.extensions.http.SimpleHttpClient;
+import com.appdynamics.extensions.http.SimpleHttpClientBuilder;
+import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.util.FileWatcher;
 import com.appdynamics.extensions.yml.YmlReader;
@@ -86,7 +90,8 @@ public class RabbitMQMonitor extends AManagedMonitor {
         if (file != null && file.exists()) {
             queueGroups = YmlReader.readFromFile(file, QueueGroup[].class);
         } else {
-            logger.warn("The config file is not present at " + argsMap.get("config-file"));
+            logger.info("The config file is not present at " + argsMap.get("config-file")
+                    + ". Only the individual Queue stats will be reported");
         }
         if (file != null) {
             //Create a File watcher to auto reload the config
@@ -113,17 +118,35 @@ public class RabbitMQMonitor extends AManagedMonitor {
             if (logger.isDebugEnabled()) {
                 logger.debug("The arguments after appending the default values are " + argsMap);
             }
-            String encodedUserPass = encodeUserPass(argsMap);
-            String base = buildBaseUrl(argsMap);
-            ArrayNode nodes = invokeApi(base + "/nodes", encodedUserPass);
-            ArrayNode channels = invokeApi(base + "/channels", encodedUserPass);
-            ArrayNode queues = invokeApi(base + "/queues", encodedUserPass);
+            SimpleHttpClient client = buildHttpClient(argsMap);
+            String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
+            ArrayNode nodes = getJson(client, nodeUrl);
+
+            String channelUrl = UrlBuilder.builder(argsMap).path("/api/channels").build();
+            ArrayNode channels = getJson(client, channelUrl);
+
+            String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
+            ArrayNode queues = getJson(client, apiUrl);
+
             process(nodes, channels, queues);
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         }
         return new TaskOutput("RabbitMQ Metric Upload Complete ");
+    }
+
+    protected ArrayNode getJson(SimpleHttpClient client, String nodeUrl) {
+        return client.target(nodeUrl).get().json(ArrayNode.class);
+    }
+
+    private SimpleHttpClient buildHttpClient(Map<String, String> argsMap) {
+        if(argsMap.containsKey("useSSL")){
+            argsMap.put(TaskInputArgs.USE_SSL,argsMap.get("useSSL"));
+        }
+        SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
+        builder.connectionTimeout(2000).socketTimeout(2000);
+        return builder.build();
     }
 
     private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {

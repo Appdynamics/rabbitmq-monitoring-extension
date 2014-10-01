@@ -22,7 +22,7 @@ public class GroupStatTracker {
         if (queueGroups != null && queueGroups.length > 0) {
             groupStatMap = new HashMap<String, GroupStat>();
         } else {
-            logger.info("The queue groups are not set.");
+            logger.info("The queue groups are not set. Only the individual Queue stats will be reported");
         }
     }
 

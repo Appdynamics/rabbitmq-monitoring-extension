@@ -1,5 +1,6 @@
 package com.appdynamics.extensions.rabbitmq;
 
+import com.appdynamics.extensions.http.SimpleHttpClient;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
@@ -17,6 +18,7 @@ import org.mockito.stubbing.Answer;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
@@ -45,7 +47,7 @@ public class RabbitMQMonitorTest {
         //When it invokes the API, read the json for the api and return.
         doAnswer(new Answer() {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                String url = (String) invocationOnMock.getArguments()[0];
+                String url = (String) invocationOnMock.getArguments()[1];
                 String file = null;
                 if (url.contains("/nodes")) {
                     file = "/json/nodes.json";
@@ -58,7 +60,7 @@ public class RabbitMQMonitorTest {
                 ObjectMapper mapper = new ObjectMapper();
                 return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
             }
-        }).when(rabbitMonitor).invokeApi(anyString(), anyString());
+        }).when(rabbitMonitor).getJson(any(SimpleHttpClient.class), anyString());
         expectedValueMap = new HashMap<String, String>();
     }
 
