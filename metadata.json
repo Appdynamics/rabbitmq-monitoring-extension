@@ -14,56 +14,56 @@
                     "displayName" : "Execution Style",
                     "defaultValue" : "periodic",
                     "description" : "The data to be reported from system performance counters periodically.",
-                    "isRequired" : true
+                    "required" : true
                 },
 				{
 					"name" : "execution-frequency-in-seconds",
 					"displayName" : "Execution Frequency",
 					"defaultValue" : "60",
 					"description" : "Determines the execution frequency in seconds.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "execution-timeout-in-seconds",
 					"displayName" : "Execution Timeout",
 					"defaultValue" : "60",
 					"description" : "Determines the execution timeout in seconds.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "host",
 					"displayName" : "Hostname",
 					"defaultValue" : "localhost",
 					"description" : "RabbitMQ hostname.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "port",
 					"displayName" : "Port",
 					"defaultValue" : "15672",
 					"description" : "RabbitMQ port.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "useSSL",
 					"displayName" : "Use SSL",
 					"defaultValue" : "false",
 					"description" : "Determines whether SSL needs to be used.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "username",
 					"displayName" : "User Name",
 					"defaultValue" : "guest",
 					"description" : "RabbitMQ username.",
-					"isRequired" : true
+					"required" : true
 				},
 				{
 					"name" : "password",
 					"displayName" : "Password",
 					"defaultValue" : "guest",
 					"description" : "RabbitMQ password.",
-					"isRequired" : true
+					"required" : true
 				}
 			]
 		},
