@@ -8,7 +8,7 @@
         "sockets_total": 7280,
         "mem_used": 21497376,
         "mem_limit": 858993459,
-        "mem_alarm": false,
+        "mem_alarm": true,
         "disk_free_limit": 50000000,
         "disk_free": 4914630656,
         "disk_free_alarm": false,

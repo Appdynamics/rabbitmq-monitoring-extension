@@ -266,6 +266,8 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     String prefix = "Nodes|" + name;
                     BigInteger procUsed = getBigIntegerValue("proc_used", node, 0);
                     printCollectiveObservedCurrent(prefix + "|Erlang Processes", procUsed);
+                    printCollectiveObservedCurrent(prefix + "|Disk Free Alarm Activated", getNumericValueForBoolean("disk_free_alarm", node, -1));
+                    printCollectiveObservedCurrent(prefix + "|Memory Free Alarm Activated", getNumericValueForBoolean("mem_alarm", node, -1));
                     BigInteger fdUsed = getBigIntegerValue("fd_used", node, 0);
                     printCollectiveObservedCurrent(prefix + "|File Descriptors", fdUsed);
                     BigInteger memUsed = getBigIntegerValue("mem_used", node, 0);
@@ -287,6 +289,15 @@ public class RabbitMQMonitor extends AManagedMonitor {
         writeTotalChannelCount(channels);
         writeTotalConsumerCount(queues);
 
+    }
+
+    private BigInteger getNumericValueForBoolean(String key, JsonNode node, int defaultValue) {
+        final Boolean booleanValue = getBooleanValue(key, node);
+        if(booleanValue == null){
+            return BigInteger.valueOf(defaultValue);
+        }else{
+            return booleanValue.booleanValue() ? BigInteger.ONE : BigInteger.ZERO;
+        }
     }
 
     /**
