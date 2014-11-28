@@ -56,6 +56,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private List<String> queueNodeProps = Arrays.asList("consumers");
     //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues
     private List<String> queueMessageProps = Arrays.asList("messages_ready", "messages_unacknowledged");
+    private List<String> queueReplicationCountsProps = Arrays.asList("slave_nodes", "synchronised_slave_nodes", "down_slave_nodes");
     //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats
     private List<String> queueMessageStatsProps = Arrays.asList("ack", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver");
     //Items in Summary|Messages - data looked up from /api/queues
@@ -82,6 +83,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
         dictionary.put("consumers", "Count");
         dictionary.put("active_consumers", "Active");
         dictionary.put("idle_consumers", "Idle");
+        dictionary.put("slave_nodes", "Slaves Count");
+        dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
+        dictionary.put("down_slave_nodes", "Down Slaves Count");
     }
 
     private void configure(Map<String, String> argsMap) {
@@ -191,6 +195,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     groupStat.add(grpMsgPrefix + metricName, value);
                     addToMap(valueMap, prop, value);
                 }
+                String replicationPrefix = prefix + "|Replication|";
+                for (String prop : queueReplicationCountsProps) {
+                    BigInteger value = getChildrenCount(prop, queue, 0);
+                    String metricName = getPropDesc(prop);
+                    if (showIndividualStats) {
+                        printCollectiveObservedCurrent(replicationPrefix + metricName, value);
+                    }
+                }
 
                 //Fetch data from message_stats object
                 JsonNode msgStats = queue.get("message_stats");
@@ -226,6 +238,17 @@ public class RabbitMQMonitor extends AManagedMonitor {
         } else {
             printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
         }
+    }
+
+    private BigInteger getChildrenCount(String prop, JsonNode node, int defaultValue) {
+        if(node != null){
+            final JsonNode metricNode = node.get(prop);
+            if(metricNode != null && metricNode instanceof ArrayNode){
+                final ArrayNode arrayOfChildren = (ArrayNode) metricNode;
+                return BigInteger.valueOf(arrayOfChildren.size());
+            }
+        }
+        return BigInteger.valueOf(defaultValue);
     }
 
     private String lower(String value) {
