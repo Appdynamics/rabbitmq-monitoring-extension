@@ -1,6 +1,7 @@
 {
 	"id" : "rabbitmq-monitoring-extension",
 	"description" : "RabbitMQ Extension",
+	"displayName" : "RabbitMQ Extension",
 	"version" : "1.0.5",
 	"repoLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension",
 	"downloadFilename" : "RabbitMQMonitor.zip",
@@ -24,7 +25,7 @@
 					"required" : true
 				},
 				{
-					"name" : "execution-timeout-in-seconds",
+					"name" : "execution-timeout-in-secs",
 					"displayName" : "Execution Timeout",
 					"defaultValue" : "60",
 					"description" : "Determines the execution timeout in seconds.",
