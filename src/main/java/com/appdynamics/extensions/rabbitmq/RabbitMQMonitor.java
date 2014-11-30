@@ -3,12 +3,14 @@ package com.appdynamics.extensions.rabbitmq;
 import com.appdynamics.TaskInputArgs;
 import com.appdynamics.extensions.ArgumentsValidator;
 import com.appdynamics.extensions.PathResolver;
+import com.appdynamics.extensions.crypto.CryptoUtil;
 import com.appdynamics.extensions.http.SimpleHttpClient;
 import com.appdynamics.extensions.http.SimpleHttpClientBuilder;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.util.FileWatcher;
 import com.appdynamics.extensions.yml.YmlReader;
+import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
@@ -522,10 +524,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
         } else {
             newArgsMap = new HashMap<String, String>();
         }
+        newArgsMap.put("password",CryptoUtil.getPassword(newArgsMap));
         if (newArgsMap.get("username") == null) {
             newArgsMap.put("username", "guest");
         }
-        if (newArgsMap.get("password") == null) {
+        if (Strings.isNullOrEmpty(newArgsMap.get("password"))) {
             newArgsMap.put("password", "guest");
         }
         if (newArgsMap.get("host") == null) {

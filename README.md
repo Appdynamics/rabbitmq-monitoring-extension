@@ -65,6 +65,18 @@ The following metrics are reported. The Metric Path is relative to the "metricPr
 | Summary/Messages/Pending Acknowledgements | The total count of messages with the status 'messages_unacknowledged' in the RabbitMQ server |
 | Summary/Queues | The count of queues in the RabbitMQ Server |
 
+
+##Password Encryption Support 
+
+To avoid setting the clear text password in the monitor.xml. Please follow the process to encrypt the password and set the encrypted password and the key in the monitor.xml 
+1. Download the util jar to encrypt the password from here 
+2. Encrypt password from the commandline 
+java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword 
+3. Add the properties in the monitor.xml. Substitute the default-value 
+<argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/> 
+<argument name="encryption-key" is-required="false" default-value="myKey"/>
+
+
 #Custom Dashboard
 ![](https://github.com/Appdynamics/rabbitmq-monitoring-extension/raw/master/RabbitMQCustomDashboard.png)
 
