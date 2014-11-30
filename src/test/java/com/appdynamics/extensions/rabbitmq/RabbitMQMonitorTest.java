@@ -154,6 +154,9 @@ public class RabbitMQMonitorTest {
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Got No-Ack", "15");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Published", "40");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Messages|Redelivered", "35");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Replication|Synchronized Slaves Count", "0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Replication|Down Slaves Count", "0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save|Replication|Slaves Count", "0");
 
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Consumers", "1");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Available", "16");
@@ -166,6 +169,9 @@ public class RabbitMQMonitorTest {
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Got No-Ack", "16");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Published", "14");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Messages|Redelivered", "36");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Replication|Synchronized Slaves Count", "1");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Replication|Down Slaves Count", "0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Queues|Default|queue.user.save-2|Replication|Slaves Count", "1");
     }
 
     private void initExpectedSummaryMetrics() {
@@ -195,6 +201,8 @@ public class RabbitMQMonitorTest {
 
     private void initExpectedNodeMetrics() {
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Erlang Processes", "215");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Disk Free Alarm Activated", "0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Memory Free Alarm Activated", "1");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Memory(MB)", "21");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Sockets", "3");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Nodes|rabbit@ABEY-WIN7-32|Channels|Count", "2");

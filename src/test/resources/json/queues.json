@@ -130,6 +130,13 @@
         "durable": true,
         "auto_delete": false,
         "arguments": {},
+        "slave_nodes": [
+            "rabbitmq4@hof-halimf1-m"
+        ],
+        "synchronised_slave_nodes": [
+            "rabbitmq4@hof-halimf1-m"
+        ],
+        "down_slave_nodes": [ ],
         "node": "rabbit@ABEY-WIN7-32"
     }
 ]
