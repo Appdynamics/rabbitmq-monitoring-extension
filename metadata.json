@@ -1,5 +1,6 @@
 {
 	"id" : "rabbitmq-monitoring-extension",
+	"type" : "monitor",
 	"description" : "RabbitMQ Extension",
 	"displayName" : "RabbitMQ Extension",
 	"version" : "1.0.5",
