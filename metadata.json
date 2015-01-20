@@ -5,7 +5,7 @@
 	"displayName" : "RabbitMQ Extension",
 	"version" : "1.0.5",
 	"downloadLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension/releases/download/rabbitmq-monitoring-extension-1.0.3/RabbitMQMonitor.zip",
-	"configs" : [
+	"defaultConfigs" : [
 		{
 			"name" : "monitor.xml",
 			"link" : "https://raw.githubusercontent.com/Appdynamics/rabbitmq-monitoring-extension/master/src/main/resources/config/monitor.xml",
