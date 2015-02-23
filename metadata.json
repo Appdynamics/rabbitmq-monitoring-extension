@@ -1,22 +1,17 @@
 {
 	"id" : "rabbitmq-monitoring-extension",
-	"description" : "RabbitMQ Extension",
+	"type" : "monitor",
+	"description" : "The RabbitMQ Monitoring extension collects metrics from an RabbitMQ messaging server and uploads them to the AppDynamics Controller.",
 	"displayName" : "RabbitMQ Extension",
-	"version" : "1.0.5",
-	"repoLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension",
-	"downloadFilename" : "RabbitMQMonitor.zip",
-	"configs" : [
+	"version" : "1.0.8",
+	"downloadLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension/releases/download/1.0.8/RabbitMQMonitor.zip",
+	"imageLink" : "https://no-cache.appdynamics-static.com/appsphere/logos/rabbitmq_128.png",
+	"defaultConfigs" : [
 		{
 			"name" : "monitor.xml",
 			"link" : "https://raw.githubusercontent.com/Appdynamics/rabbitmq-monitoring-extension/master/src/main/resources/config/monitor.xml",
 			"args" : [
-				{
-                    "name" : "execution-style",
-                    "displayName" : "Execution Style",
-                    "defaultValue" : "periodic",
-                    "description" : "The data to be reported from system performance counters periodically.",
-                    "required" : true
-                },
+				
 				{
 					"name" : "execution-frequency-in-seconds",
 					"displayName" : "Execution Frequency",
@@ -69,7 +64,7 @@
 			]
 		},
 		{
-			"name" : "config.yaml",
+			"name" : "config.yml",
 			"link" : "https://raw.githubusercontent.com/Appdynamics/rabbitmq-monitoring-extension/master/src/main/resources/config/config.yml"
 		}
 	]

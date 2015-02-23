@@ -1,5 +1,5 @@
 <monitor>
-    <name>rabbitmq-monitor</name>
+    <name>RabbitMQMonitor</name>
     <type>managed</type>
     <description>RabbitMQ Monitoring Extension</description>
     <monitor-configuration></monitor-configuration>

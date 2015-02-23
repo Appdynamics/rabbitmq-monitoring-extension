@@ -4,7 +4,7 @@
 
     <groupId>com.appdynamics.extensions</groupId>
     <artifactId>rabbitmq-monitoring-extension</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.8</version>
     <packaging>jar</packaging>
     <name>rabbitmq-monitoring-extension</name>
     <url>http://maven.apache.org</url>
@@ -39,7 +39,6 @@
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
             <version>3.1</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -121,7 +120,7 @@
                                 <copy todir="${target.dir}">
                                     <fileset dir="${build.directory}" includes="${project.artifactId}.${project.packaging}"/>
                                 </copy>
-                                <zip destfile="${target.dir}-${project.version}.zip">
+                                <zip destfile="${target.dir}.zip">
                                     <zipfileset dir="${target.dir}" filemode="755" prefix="RabbitMQMonitor/"/>
                                 </zip>
                                 <delete dir="${target.dir}"/>
