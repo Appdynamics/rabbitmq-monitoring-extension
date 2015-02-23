@@ -18,8 +18,7 @@ import org.mockito.stubbing.Answer;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.doAnswer;
 
 /**
@@ -140,6 +139,38 @@ public class RabbitMQMonitorTest {
         Assert.assertEquals("15672x", map.get("port"));
         Assert.assertEquals("falsex", map.get("useSSL"));
         Assert.assertEquals("X|Custom Metrics|RabbitMQ|", map.get("metricPrefix"));
+    }
+
+    @Test
+    public void checkReturnsFederationStatusWhenAvailable() throws TaskExecutionException {
+        initExpectedNodeMetrics();
+        initExpectedSummaryMetrics();
+        initExpectedQueueMetrics();
+        initFederationMocks();
+        initExpectedFederationMetrics();
+        rabbitMonitor.execute(new HashMap<String, String>(), null);
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
+                , expectedValueMap.isEmpty());
+    }
+
+    private void initFederationMocks() {
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                String url = (String) invocationOnMock.getArguments()[1];
+                String file = null;
+                if (url.contains("federation-links")) {
+                    file = "/json/federation-links.json";
+                }
+                logger.info("Returning the mocked data for the api " + file);
+                ObjectMapper mapper = new ObjectMapper();
+                return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+            }
+        }).when(rabbitMonitor).getOptionalJson(any(SimpleHttpClient.class), contains("federation-links"));
+    }
+
+    private void initExpectedFederationMetrics() {
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Federations|myexch1|myexch1_upstream_0|running", "0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Federations|myexch1|myexch1_upstream_1|running", "1");
     }
 
     private void initExpectedQueueMetrics() {

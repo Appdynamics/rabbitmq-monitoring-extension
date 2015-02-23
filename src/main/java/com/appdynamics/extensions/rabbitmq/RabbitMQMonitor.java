@@ -134,7 +134,10 @@ public class RabbitMQMonitor extends AManagedMonitor {
             String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
             ArrayNode queues = getJson(client, apiUrl);
 
-            process(nodes, channels, queues);
+            String federationLinkUrl = UrlBuilder.builder(argsMap).path("/api/federation-links").build();
+            ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl);
+
+            process(nodes, channels, queues, federationLinks);
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
@@ -146,6 +149,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
         return client.target(nodeUrl).get().json(ArrayNode.class);
     }
 
+    protected ArrayNode getOptionalJson(SimpleHttpClient client, String nodeUrl) {
+        try{
+            return client.target(nodeUrl).get().json(ArrayNode.class);
+        }catch(Throwable ex){
+            return null;
+        }
+    }
+
     private SimpleHttpClient buildHttpClient(Map<String, String> argsMap) {
         if(argsMap.containsKey("useSSL")){
             argsMap.put(TaskInputArgs.USE_SSL,argsMap.get("useSSL"));
@@ -155,9 +166,26 @@ public class RabbitMQMonitor extends AManagedMonitor {
         return builder.build();
     }
 
-    private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
+    private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues, ArrayNode federationLinks) {
         parseNodeData(nodes, channels, queues);
         parseQueueData(queues);
+        parseFederationData(federationLinks);
+    }
+
+    private void parseFederationData(ArrayNode federationLinks) {
+        String prefix = "Federations|";
+        if(federationLinks != null){
+            for(JsonNode federationLink: federationLinks){
+                final String exchangeName = getStringValue("exchange", federationLink);
+                final String upstreamName = getStringValue("upstream", federationLink);
+                final String status = getStringValue("status", federationLink);
+                printMetric(prefix + exchangeName + "|" + upstreamName + "|running", BigInteger.valueOf(status.equals("running") ? 1 : 0),
+                        MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+                );
+            }
+        }
     }
 
     /**
@@ -170,6 +198,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
             GroupStatTracker tracker = new GroupStatTracker(queueGroups);
             for (JsonNode queue : queues) {
+
                 //Rabbit MQ queue names are case sensitive,
                 // however the controller bombs when there are 2 metrics with same name in different cases.
                 String qName = lower(getStringValue("name", queue, "Default"));
