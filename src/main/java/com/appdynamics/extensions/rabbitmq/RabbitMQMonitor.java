@@ -152,7 +152,8 @@ public class RabbitMQMonitor extends AManagedMonitor {
     protected ArrayNode getOptionalJson(SimpleHttpClient client, String nodeUrl) {
         try{
             return client.target(nodeUrl).get().json(ArrayNode.class);
-        }catch(Throwable ex){
+        }catch(Exception ex){
+            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL",ex);
             return null;
         }
     }
