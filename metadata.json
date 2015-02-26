@@ -3,8 +3,8 @@
 	"type" : "monitor",
 	"description" : "The RabbitMQ Monitoring extension collects metrics from an RabbitMQ messaging server and uploads them to the AppDynamics Controller.",
 	"displayName" : "RabbitMQ Extension",
-	"version" : "1.0.8",
-	"downloadLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension/releases/download/1.0.8/RabbitMQMonitor.zip",
+	"version" : "1.0.9",
+	"downloadLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension/releases/download/1.0.9/RabbitMQMonitor.zip",
 	"imageLink" : "https://no-cache.appdynamics-static.com/appsphere/logos/rabbitmq_128.png",
 	"defaultConfigs" : [
 		{
