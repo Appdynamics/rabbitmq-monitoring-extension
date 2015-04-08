@@ -63,6 +63,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private List<String> queueMessageStatsProps = Arrays.asList("ack", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver");
     //Items in Summary|Messages - data looked up from /api/queues
     private List<String> queueSummaryProps = Arrays.asList("messages_ready", "deliver_get", "publish", "redeliver", "messages_unacknowledged");
+    //Overview Queue Totals
+    private List<String> queueTotalsProps = Arrays.asList("messages", "messages_ready", "messages_unacknowledged");
+    private List<String> messageTotalsProps = Arrays.asList("publish", "ack", "deliver_get", "deliver");
+    private List<String> objectTotalsProps = Arrays.asList("consumers", "queues", "exchanges", "connections", "channels");
+
+    //Per Minute Metrics, All these metric suffixes will be reported as per minute also
+    private List<String> perMinMetricSuffixes = Arrays.asList("|Messages|Delivered (Total)", "|Messages|Published");
+    private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
 
     private boolean initialized;
     protected QueueGroup[] queueGroups;
@@ -88,6 +96,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         dictionary.put("slave_nodes", "Slaves Count");
         dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
         dictionary.put("down_slave_nodes", "Down Slaves Count");
+        dictionary.put("messages", "Messages");
     }
 
     private void configure(Map<String, String> argsMap) {
@@ -118,13 +127,13 @@ public class RabbitMQMonitor extends AManagedMonitor {
             configure(argsMap);
         }
         logger.info("Starting the RabbitMQ Metric Monitoring task");
+        argsMap = checkArgs(argsMap);
+        metricPrefix = argsMap.get("metricPrefix");
+        if (logger.isDebugEnabled()) {
+            logger.debug("The arguments after appending the default values are " + argsMap);
+        }
+        SimpleHttpClient client = buildHttpClient(argsMap);
         try {
-            argsMap = checkArgs(argsMap);
-            metricPrefix = argsMap.get("metricPrefix");
-            if (logger.isDebugEnabled()) {
-                logger.debug("The arguments after appending the default values are " + argsMap);
-            }
-            SimpleHttpClient client = buildHttpClient(argsMap);
             String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
             ArrayNode nodes = getJson(client, nodeUrl);
 
@@ -133,50 +142,99 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
             String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
             ArrayNode queues = getJson(client, apiUrl);
+            process(nodes, channels, queues);
 
             String federationLinkUrl = UrlBuilder.builder(argsMap).path("/api/federation-links").build();
-            ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl);
+            ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl, ArrayNode.class);
+            parseFederationData(federationLinks);
 
-            process(nodes, channels, queues, federationLinks);
+            String overviewUrl = UrlBuilder.builder(argsMap).path("/api/overview").build();
+            JsonNode overview = getOptionalJson(client, overviewUrl, JsonNode.class);
+            parseOverviewData(overview);
+
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
+        } finally {
+            try {
+                client.close();
+            } catch (Exception e) {
+                logger.error("Error while closing the http client", e);
+            }
         }
         return new TaskOutput("RabbitMQ Metric Upload Complete ");
     }
 
-    protected ArrayNode getJson(SimpleHttpClient client, String nodeUrl) {
-        return client.target(nodeUrl).get().json(ArrayNode.class);
+    protected ArrayNode getJson(SimpleHttpClient client, String url) {
+        ArrayNode json = client.target(url).get().json(ArrayNode.class);
+        if (logger.isDebugEnabled()) {
+            logger.debug("The url " + url + " responded with a json {}" + json);
+        }
+        return json;
     }
 
-    protected ArrayNode getOptionalJson(SimpleHttpClient client, String nodeUrl) {
-        try{
-            return client.target(nodeUrl).get().json(ArrayNode.class);
-        }catch(Exception ex){
-            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL",ex);
+    protected <T> T getOptionalJson(SimpleHttpClient client, String url, Class<T> clazz) {
+        try {
+            T json = client.target(url).get().json(clazz);
+            if (logger.isDebugEnabled()) {
+                logger.debug("The url " + url + " responded with a json " + json);
+            }
+            return json;
+        } catch (Exception ex) {
+            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL", ex);
             return null;
         }
     }
 
     private SimpleHttpClient buildHttpClient(Map<String, String> argsMap) {
-        if(argsMap.containsKey("useSSL")){
-            argsMap.put(TaskInputArgs.USE_SSL,argsMap.get("useSSL"));
+        if (argsMap.containsKey("useSSL")) {
+            argsMap.put(TaskInputArgs.USE_SSL, argsMap.get("useSSL"));
         }
         SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
         builder.connectionTimeout(2000).socketTimeout(2000);
         return builder.build();
     }
 
-    private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues, ArrayNode federationLinks) {
+    private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
         parseNodeData(nodes, channels, queues);
         parseQueueData(queues);
-        parseFederationData(federationLinks);
+    }
+
+    private void parseOverviewData(JsonNode overview) {
+        if (overview != null) {
+            JsonNode clusterNode = overview.get("cluster_name");
+            if (clusterNode != null) {
+                String clusterName = clusterNode.getTextValue();
+                String prefix = "Clusters|" + clusterName + "|";
+                //Queue Totals
+                report(overview.get("message_stats"), messageTotalsProps, prefix + "Messages|", true);
+                report(overview.get("queue_totals"), queueTotalsProps, prefix + "Queues|", true);
+                report(overview.get("object_totals"), objectTotalsProps, prefix + "Objects|", false);
+            }
+        }
+    }
+
+    private void report(JsonNode node, List<String> fields, String metricPrefix, boolean useDictionary) {
+        if (node != null && fields != null) {
+            for (String field : fields) {
+                JsonNode valueNode = node.get(field);
+                if (valueNode != null) {
+                    if (useDictionary) {
+                        printCollectiveObservedCurrent(metricPrefix + dictionary.get(field), valueNode.getBigIntegerValue());
+                    } else {
+                        printCollectiveObservedCurrent(metricPrefix + field, valueNode.getBigIntegerValue());
+                    }
+                }
+            }
+        } else {
+            logger.debug("Not reporting the " + metricPrefix + " since the node is null");
+        }
     }
 
     private void parseFederationData(ArrayNode federationLinks) {
         String prefix = "Federations|";
-        if(federationLinks != null){
-            for(JsonNode federationLink: federationLinks){
+        if (federationLinks != null) {
+            for (JsonNode federationLink : federationLinks) {
                 final String exchangeName = getStringValue("exchange", federationLink);
                 final String upstreamName = getStringValue("upstream", federationLink);
                 final String status = getStringValue("status", federationLink);
@@ -273,9 +331,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
     }
 
     private BigInteger getChildrenCount(String prop, JsonNode node, int defaultValue) {
-        if(node != null){
+        if (node != null) {
             final JsonNode metricNode = node.get(prop);
-            if(metricNode != null && metricNode instanceof ArrayNode){
+            if (metricNode != null && metricNode instanceof ArrayNode) {
                 final ArrayNode arrayOfChildren = (ArrayNode) metricNode;
                 return BigInteger.valueOf(arrayOfChildren.size());
             }
@@ -348,9 +406,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
     private BigInteger getNumericValueForBoolean(String key, JsonNode node, int defaultValue) {
         final Boolean booleanValue = getBooleanValue(key, node);
-        if(booleanValue == null){
+        if (booleanValue == null) {
             return BigInteger.valueOf(defaultValue);
-        }else{
+        } else {
             return booleanValue.booleanValue() ? BigInteger.ONE : BigInteger.ZERO;
         }
     }
@@ -554,7 +612,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         } else {
             newArgsMap = new HashMap<String, String>();
         }
-        newArgsMap.put("password",CryptoUtil.getPassword(newArgsMap));
+        newArgsMap.put("password", CryptoUtil.getPassword(newArgsMap));
         if (newArgsMap.get("username") == null) {
             newArgsMap.put("username", "guest");
         }
@@ -634,12 +692,33 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     + "] metric = " + metricPrefix + metricName + " = " + value);
         }
         metricWriter.printMetric(value);
+
     }
 
     private void printCollectiveObservedCurrent(String metricName, BigInteger metricValue) {
         printMetric(metricName, metricValue,
                 MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
                 MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+        );
+        if (metricValue != null) {
+            for (String suffix : perMinMetricSuffixes) {
+                if (metricName.endsWith(suffix)) {
+                    BigInteger value = perMinMetricsMap.get(metricName);
+                    if (value != null) {
+                        BigInteger diff = metricValue.subtract(value);
+                        printCollectiveObservedAverage(metricName+" Per Minute", diff);
+                    }
+                    perMinMetricsMap.put(metricName,metricValue);
+                }
+            }
+        }
+    }
+
+    protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue) {
+        printMetric(metricName, metricValue,
+                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
                 MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
         );
     }

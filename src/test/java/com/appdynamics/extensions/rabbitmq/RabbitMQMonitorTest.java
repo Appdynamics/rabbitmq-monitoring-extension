@@ -6,6 +6,7 @@ import com.appdynamics.extensions.yml.YmlReader;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
@@ -46,6 +47,8 @@ public class RabbitMQMonitorTest {
         //When it invokes the API, read the json for the api and return.
         doAnswer(new Answer() {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+
+                ObjectMapper mapper = new ObjectMapper();
                 String url = (String) invocationOnMock.getArguments()[1];
                 String file = null;
                 if (url.contains("/nodes")) {
@@ -56,10 +59,26 @@ public class RabbitMQMonitorTest {
                     file = "/json/queues.json";
                 }
                 logger.info("Returning the mocked data for the api " + file);
-                ObjectMapper mapper = new ObjectMapper();
                 return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
             }
         }).when(rabbitMonitor).getJson(any(SimpleHttpClient.class), anyString());
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ObjectMapper mapper = new ObjectMapper();
+                String url = (String) invocationOnMock.getArguments()[1];
+                logger.info("Returning the mocked data for the api " + url);
+                String file = null;
+                if (url.contains("/overview")) {
+                    file = "/json/overview.json";
+                    return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
+                } else if (url.contains("federation-links")) {
+                    file = "/json/federation-links.json";
+                    return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+                }
+                return null;
+
+            }
+        }).when(rabbitMonitor).getOptionalJson(any(SimpleHttpClient.class), anyString(), any(Class.class));
         expectedValueMap = new HashMap<String, String>();
     }
 
@@ -74,6 +93,7 @@ public class RabbitMQMonitorTest {
                     expectedValueMap.remove(metricName);
                 } else {
                     Assert.fail("Unknown Metric " + metricName);
+//                    System.out.println("\""+metricName+"\",\""+actualValue+"\"");
                 }
                 return null;
             }
@@ -86,6 +106,8 @@ public class RabbitMQMonitorTest {
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedQueueMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
@@ -96,6 +118,8 @@ public class RabbitMQMonitorTest {
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
         rabbitMonitor.queueGroups = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), QueueGroup[].class);
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -108,6 +132,8 @@ public class RabbitMQMonitorTest {
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedQueueMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
         rabbitMonitor.queueGroups = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), QueueGroup[].class);
         rabbitMonitor.queueGroups[0].setShowIndividualStats(true);
         rabbitMonitor.execute(new HashMap<String, String>(), null);
@@ -146,26 +172,26 @@ public class RabbitMQMonitorTest {
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedQueueMetrics();
-        initFederationMocks();
         initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
 
-    private void initFederationMocks() {
-        doAnswer(new Answer() {
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                String url = (String) invocationOnMock.getArguments()[1];
-                String file = null;
-                if (url.contains("federation-links")) {
-                    file = "/json/federation-links.json";
-                }
-                logger.info("Returning the mocked data for the api " + file);
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
-            }
-        }).when(rabbitMonitor).getOptionalJson(any(SimpleHttpClient.class), contains("federation-links"));
+    private void initExpectedClusterMetrics(){
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Messages|Published","41");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Messages|Acknowledged","42");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Messages|Delivered (Total)","43");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Messages|Delivered","44");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Queues|Messages","1");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Queues|Available","2");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Queues|Pending Acknowledgements","3");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|consumers","5");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|queues","2");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|exchanges","8");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|connections","6");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|channels","7");
     }
 
     private void initExpectedFederationMetrics() {
