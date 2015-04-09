@@ -69,7 +69,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private List<String> objectTotalsProps = Arrays.asList("consumers", "queues", "exchanges", "connections", "channels");
 
     //Per Minute Metrics, All these metric suffixes will be reported as per minute also
-    private List<String> perMinMetricSuffixes = Arrays.asList("|Messages|Delivered (Total)", "|Messages|Published");
+    private List<String> perMinMetricSuffixes = Arrays.asList("|Messages|Delivered (Total)", "|Messages|Published", "|Messages|Acknowledged", "|Messages|Redelivered");
     private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
 
     private boolean initialized;
@@ -150,10 +150,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
             String overviewUrl = UrlBuilder.builder(argsMap).path("/api/overview").build();
             JsonNode overview = getOptionalJson(client, overviewUrl, JsonNode.class);
-            parseOverviewData(overview);
+            parseOverviewData(overview, nodes);
 
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
+            printCollectiveObservedAverage("Availability",BigInteger.ZERO);
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         } finally {
             try {
@@ -200,7 +201,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         parseQueueData(queues);
     }
 
-    private void parseOverviewData(JsonNode overview) {
+    private void parseOverviewData(JsonNode overview, ArrayNode nodes) {
         if (overview != null) {
             JsonNode clusterNode = overview.get("cluster_name");
             if (clusterNode != null) {
@@ -210,7 +211,24 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 report(overview.get("message_stats"), messageTotalsProps, prefix + "Messages|", true);
                 report(overview.get("queue_totals"), queueTotalsProps, prefix + "Queues|", true);
                 report(overview.get("object_totals"), objectTotalsProps, prefix + "Objects|", false);
+
+                //Total Nodes
+                String nodePrefix = prefix + "Nodes|";
+                if (nodes != null) {
+                    printCollectiveObservedAverage(nodePrefix + "Total", new BigInteger(String.valueOf(nodes.size())));
+                    int runningCount = 0;
+                    for (JsonNode node : nodes) {
+                        Boolean running = getBooleanValue("running", node);
+                        if (running != null && running) {
+                            runningCount++;
+                        }
+                    }
+                    printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)));
+                }
+                printCollectiveObservedAverage("Availability",BigInteger.ONE);
             }
+        } else{
+            printCollectiveObservedAverage("Availability",BigInteger.ZERO);
         }
     }
 
@@ -707,9 +725,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     BigInteger value = perMinMetricsMap.get(metricName);
                     if (value != null) {
                         BigInteger diff = metricValue.subtract(value);
-                        printCollectiveObservedAverage(metricName+" Per Minute", diff);
+                        printCollectiveObservedAverage(metricName + " Per Minute", diff);
                     }
-                    perMinMetricsMap.put(metricName,metricValue);
+                    perMinMetricsMap.put(metricName, metricValue);
                 }
             }
         }

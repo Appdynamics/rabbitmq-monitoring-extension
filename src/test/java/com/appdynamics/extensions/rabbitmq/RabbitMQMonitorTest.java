@@ -192,6 +192,9 @@ public class RabbitMQMonitorTest {
         expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|exchanges","8");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|connections","6");
         expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Objects|channels","7");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Nodes|Total","1");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Clusters|rabbit@rabbit1|Nodes|Running","0");
+        expectedValueMap.put("Custom Metrics|RabbitMQ|Availability","1");
     }
 
     private void initExpectedFederationMetrics() {
