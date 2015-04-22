@@ -154,7 +154,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
-            printCollectiveObservedAverage("Availability",BigInteger.ZERO);
+            printCollectiveObservedAverage("Availability", BigInteger.ZERO);
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         } finally {
             try {
@@ -204,6 +204,10 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private void parseOverviewData(JsonNode overview, ArrayNode nodes) {
         if (overview != null) {
             JsonNode clusterNode = overview.get("cluster_name");
+            //In some older versions, the node name is different
+            if (clusterNode == null) {
+                clusterNode = overview.get("node");
+            }
             if (clusterNode != null) {
                 String clusterName = clusterNode.getTextValue();
                 String prefix = "Clusters|" + clusterName + "|";
@@ -224,11 +228,19 @@ public class RabbitMQMonitor extends AManagedMonitor {
                         }
                     }
                     printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)));
+                    if (runningCount < nodes.size()) {
+                        printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
+                    } else {
+                        printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ONE);
+                    }
+                } else{
+                    // If there are no nodes running
+                    printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
                 }
-                printCollectiveObservedAverage("Availability",BigInteger.ONE);
+                printCollectiveObservedAverage("Availability", BigInteger.ONE);
             }
-        } else{
-            printCollectiveObservedAverage("Availability",BigInteger.ZERO);
+        } else {
+            printCollectiveObservedAverage("Availability", BigInteger.ZERO);
         }
     }
 
@@ -738,6 +750,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
                 MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
                 MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+        );
+    }
+
+    protected void printIndividualObservedAverage(String metricName, BigInteger metricValue) {
+        printMetric(metricName, metricValue,
+                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
         );
     }
 
