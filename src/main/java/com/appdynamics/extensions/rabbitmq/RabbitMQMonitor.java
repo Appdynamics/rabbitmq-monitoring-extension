@@ -192,7 +192,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
             argsMap.put(TaskInputArgs.USE_SSL, argsMap.get("useSSL"));
         }
         SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
-        builder.connectionTimeout(2000).socketTimeout(2000);
+        builder.connectionTimeout(10000).socketTimeout(10000);
         return builder.build();
     }
 
@@ -250,9 +250,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 JsonNode valueNode = node.get(field);
                 if (valueNode != null) {
                     if (useDictionary) {
-                        printCollectiveObservedCurrent(metricPrefix + dictionary.get(field), valueNode.getBigIntegerValue());
+                        printIndividualObservedAverage(metricPrefix + dictionary.get(field), valueNode.getBigIntegerValue());
                     } else {
-                        printCollectiveObservedCurrent(metricPrefix + field, valueNode.getBigIntegerValue());
+                        printIndividualObservedAverage(metricPrefix + field, valueNode.getBigIntegerValue());
                     }
                 }
             }
@@ -301,7 +301,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName();
                 BigInteger consumers = getBigIntegerValue("consumers", queue, 0);
                 if (showIndividualStats) {
-                    printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
+                    printIndividualObservedAverage(prefix + "|Consumers", consumers);
                 }
                 groupStat.add(groupPrefix + "|Consumers", consumers);
                 String msgPrefix = prefix + "|Messages|";
@@ -310,7 +310,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     BigInteger value = getBigIntegerValue(prop, queue, 0);
                     String metricName = getPropDesc(prop);
                     if (showIndividualStats) {
-                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
+                        printIndividualObservedAverage(msgPrefix + metricName, value);
                     }
                     groupStat.add(grpMsgPrefix + metricName, value);
                     addToMap(valueMap, prop, value);
@@ -320,7 +320,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     BigInteger value = getChildrenCount(prop, queue, 0);
                     String metricName = getPropDesc(prop);
                     if (showIndividualStats) {
-                        printCollectiveObservedCurrent(replicationPrefix + metricName, value);
+                        printIndividualObservedAverage(replicationPrefix + metricName, value);
                     }
                 }
 
@@ -330,7 +330,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     BigInteger value = getBigIntegerValue(prop, msgStats, 0);
                     String metricName = getPropDesc(prop);
                     if (showIndividualStats) {
-                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
+                        printIndividualObservedAverage(msgPrefix + metricName, value);
                     }
                     groupStat.add(grpMsgPrefix + metricName, value);
                     addToMap(valueMap, prop, value);
@@ -340,10 +340,10 @@ public class RabbitMQMonitor extends AManagedMonitor {
             String summaryPrefix = "Summary|Messages|";
             for (String prop : queueSummaryProps) {
                 BigInteger value = valueMap.get(prop);
-                printCollectiveObservedCurrent(summaryPrefix + getPropDesc(prop), value);
+                printIndividualObservedAverage(summaryPrefix + getPropDesc(prop), value);
             }
             //Total Number of Queues
-            printCollectiveObservedCurrent("Summary|Queues", new BigInteger(String.valueOf(queues.size())));
+            printIndividualObservedAverage("Summary|Queues", new BigInteger(String.valueOf(queues.size())));
 
             //Print the regex queue group metrics
             Collection<GroupStat> groupStats = tracker.getGroupStats();
@@ -351,12 +351,12 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 for (GroupStat groupStat : groupStats) {
                     Map<String, BigInteger> groupValMap = groupStat.getValueMap();
                     for (String metric : groupValMap.keySet()) {
-                        printCollectiveObservedCurrent(metric, groupValMap.get(metric));
+                        printIndividualObservedAverage(metric, groupValMap.get(metric));
                     }
                 }
             }
         } else {
-            printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
+            printIndividualObservedAverage("Summary|Queues", new BigInteger("0"));
         }
     }
 
@@ -408,18 +408,18 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     List<JsonNode> nodeQueues = getQueues(queues, name);
                     String prefix = "Nodes|" + name;
                     BigInteger procUsed = getBigIntegerValue("proc_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|Erlang Processes", procUsed);
-                    printCollectiveObservedCurrent(prefix + "|Disk Free Alarm Activated", getNumericValueForBoolean("disk_free_alarm", node, -1));
-                    printCollectiveObservedCurrent(prefix + "|Memory Free Alarm Activated", getNumericValueForBoolean("mem_alarm", node, -1));
+                    printIndividualObservedAverage(prefix + "|Erlang Processes", procUsed);
+                    printIndividualObservedAverage(prefix + "|Disk Free Alarm Activated", getNumericValueForBoolean("disk_free_alarm", node, -1));
+                    printIndividualObservedAverage(prefix + "|Memory Free Alarm Activated", getNumericValueForBoolean("mem_alarm", node, -1));
                     BigInteger fdUsed = getBigIntegerValue("fd_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|File Descriptors", fdUsed);
+                    printIndividualObservedAverage(prefix + "|File Descriptors", fdUsed);
                     BigInteger memUsed = getBigIntegerValue("mem_used", node, 0);
                     int round = (int) Math.round(memUsed.intValue() / (1024D * 1024D));
-                    printCollectiveObservedCurrent(prefix + "|Memory(MB)", new BigInteger(String.valueOf(round)));
+                    printIndividualObservedAverage(prefix + "|Memory(MB)", new BigInteger(String.valueOf(round)));
                     BigInteger sockUsed = getBigIntegerValue("sockets_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|Sockets", sockUsed);
-                    printCollectiveObservedCurrent(prefix + "|Channels|Count", new BigInteger(String.valueOf(nodeChannels.size())));
-                    printCollectiveObservedCurrent(prefix + "|Channels|Blocked", getBlockedChannelCount(nodeChannels));
+                    printIndividualObservedAverage(prefix + "|Sockets", sockUsed);
+                    printIndividualObservedAverage(prefix + "|Channels|Count", new BigInteger(String.valueOf(nodeChannels.size())));
+                    printIndividualObservedAverage(prefix + "|Channels|Blocked", getBlockedChannelCount(nodeChannels));
                     //Nodes|$node|Messages
                     addChannelMessageProps(prefix + "|Messages", nodeChannels);
                     //Nodes|$node|Messages
@@ -456,7 +456,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 count = count.add(value);
             }
         }
-        printCollectiveObservedCurrent("Summary|Consumers", new BigInteger(String.valueOf(count)));
+        printIndividualObservedAverage("Summary|Consumers", new BigInteger(String.valueOf(count)));
     }
 
     /**
@@ -471,7 +471,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         } else {
             channelCount = 0;
         }
-        printCollectiveObservedCurrent("Summary|Channels", new BigInteger(String.valueOf(channelCount)));
+        printIndividualObservedAverage("Summary|Channels", new BigInteger(String.valueOf(channelCount)));
     }
 
     private void addQueueProps(String metricPrefix, List<JsonNode> nodeQueues) {
@@ -533,7 +533,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         for (String key : valueMap.keySet()) {
             String name = getPropDesc(key);
             BigInteger value = valueMap.get(key);
-            printCollectiveObservedCurrent(metricPrefix + "|" + name, value);
+            printIndividualObservedAverage(metricPrefix + "|" + name, value);
         }
     }
 
@@ -725,11 +725,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
     }
 
-    private void printCollectiveObservedCurrent(String metricName, BigInteger metricValue) {
+    private void printIndividualObservedAverage(String metricName, BigInteger metricValue) {
         printMetric(metricName, metricValue,
                 MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
+                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
         );
         if (metricValue != null) {
             for (String suffix : perMinMetricSuffixes) {
@@ -737,7 +737,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
                     BigInteger value = perMinMetricsMap.get(metricName);
                     if (value != null) {
                         BigInteger diff = metricValue.subtract(value);
-                        printCollectiveObservedAverage(metricName + " Per Minute", diff);
+                        printMetric(metricName + " Per Minute", diff,
+                                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+                                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
+                                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
+                        );
                     }
                     perMinMetricsMap.put(metricName, metricValue);
                 }
@@ -750,14 +754,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
                 MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
                 MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-        );
-    }
-
-    protected void printIndividualObservedAverage(String metricName, BigInteger metricValue) {
-        printMetric(metricName, metricValue,
-                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
         );
     }
 
