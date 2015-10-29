@@ -192,8 +192,8 @@ public class RabbitMQMonitor extends AManagedMonitor {
             argsMap.put(TaskInputArgs.USE_SSL, argsMap.get("useSSL"));
         }
         SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
-        builder.connectionTimeout(2000).socketTimeout(2000);
-        return builder.build();
+ 		builder.connectionTimeout(Integer.parseInt(argsMap.get("connectionTimeout"))).socketTimeout(Integer.parseInt(argsMap.get("socketTimeout")));
+       return builder.build();
     }
 
     private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
@@ -669,6 +669,12 @@ public class RabbitMQMonitor extends AManagedMonitor {
                 trim = matcher.group(1);
             }
             newArgsMap.put("metricPrefix", trim + "|");
+        }
+        if (newArgsMap.get("connectionTimeout") == null) {
+            newArgsMap.put("connectionTimeout", "2000");
+        }
+        if (newArgsMap.get("socketTimeout") == null) {
+            newArgsMap.put("socketTimeout", "2000");
         }
         return newArgsMap;
     }

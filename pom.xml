@@ -4,7 +4,7 @@
 
     <groupId>com.appdynamics.extensions</groupId>
     <artifactId>rabbitmq-monitoring-extension</artifactId>
-    <version>1.1.4</version>
+    <version>1.1.5</version>
     <packaging>jar</packaging>
     <name>rabbitmq-monitoring-extension</name>
     <url>http://maven.apache.org</url>
@@ -111,16 +111,16 @@
                         <phase>install</phase>
                         <configuration>
                             <target>
-                                <property name="target.dir" value="${build.directory}/RabbitMQMonitor"/>
+                                <property name="target.dir" value="${project.build.directory}/RabbitMQMonitor"/>
                                 <mkdir dir="${target.dir}"/>
                                 <copy todir="${target.dir}">
                                     <fileset dir="src/main/resources/config" includes="monitor.xml"/>
                                     <fileset dir="src/main/resources/config" includes="config.yml"/>
                                 </copy>
                                 <copy todir="${target.dir}">
-                                    <fileset dir="${build.directory}" includes="${project.artifactId}.${project.packaging}"/>
+                                    <fileset dir="${project.build.directory}" includes="${project.artifactId}.${project.packaging}"/>
                                 </copy>
-                                <zip destfile="${target.dir}.zip">
+                                <zip destfile="${target.dir}-${project.version}.zip">
                                     <zipfileset dir="${target.dir}" filemode="755" prefix="RabbitMQMonitor/"/>
                                 </zip>
                                 <delete dir="${target.dir}"/>
