@@ -21,6 +21,8 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 <argument name="useSSL" is-required="true" default-value="false"/>
 <argument name="username" is-required="true" default-value="guest"/>
 <argument name="password" is-required="true" default-value="guest"/>
+<argument name="connectionTimeout" is-required="true" default-value="2000"/>
+<argument name="socketTimeout" is-required="true" default-value="2000"/>
 <argument name="metricPrefix" is-required="true" default-value="Custom Metrics|RabbitMQ|"/>
 ```
 </pre>
