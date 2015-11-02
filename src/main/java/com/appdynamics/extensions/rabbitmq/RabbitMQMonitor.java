@@ -192,7 +192,14 @@ public class RabbitMQMonitor extends AManagedMonitor {
             argsMap.put(TaskInputArgs.USE_SSL, argsMap.get("useSSL"));
         }
         SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
-        builder.connectionTimeout(Integer.parseInt(argsMap.get("connectTimeout"))).socketTimeout(Integer.parseInt(argsMap.get("socketTimeout")));
+        int connectTimeout = 10000,socketTimeout=10000;
+        if(argsMap.containsKey("connectTimeout")){
+            connectTimeout = Integer.parseInt(argsMap.get("connectTimeout"));
+        }
+        if(argsMap.containsKey("socketTimeout")){
+            socketTimeout = Integer.parseInt(argsMap.get("socketTimeout"));
+        }
+        builder.connectionTimeout(connectTimeout).socketTimeout(socketTimeout);
         return builder.build();
     }
 
