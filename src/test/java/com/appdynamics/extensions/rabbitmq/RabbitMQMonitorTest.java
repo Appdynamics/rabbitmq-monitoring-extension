@@ -1,9 +1,11 @@
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.http.SimpleHttpClient;
+import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.yml.YmlReader;
+import com.google.common.collect.Lists;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.log4j.Logger;
@@ -17,6 +19,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -109,6 +112,7 @@ public class RabbitMQMonitorTest {
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
+        rabbitMonitor.instances=getDefaultInstances();
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
@@ -145,26 +149,11 @@ public class RabbitMQMonitorTest {
     @Test
     public void checkArgsTest() {
         Map<String, String> map = rabbitMonitor.checkArgs(null);
-        Assert.assertEquals("guest", map.get("username"));
-        Assert.assertEquals("guest", map.get("password"));
-        Assert.assertEquals("localhost", map.get("host"));
-        Assert.assertEquals("15672", map.get("port"));
-        Assert.assertEquals("false", map.get("useSSL"));
         Assert.assertEquals("Custom Metrics|RabbitMQ|", map.get("metricPrefix"));
 
         Map<String, String> argsMap = new HashMap<String, String>();
-        argsMap.put("username", "userx");
-        argsMap.put("password", "passwordx");
-        argsMap.put("host", "192x");
-        argsMap.put("port", "15672x");
-        argsMap.put("useSSL", "falsex");
         argsMap.put("metricPrefix", "X|Custom Metrics|RabbitMQ|");
         map = rabbitMonitor.checkArgs(argsMap);
-        Assert.assertEquals("userx", map.get("username"));
-        Assert.assertEquals("passwordx", map.get("password"));
-        Assert.assertEquals("192x", map.get("host"));
-        Assert.assertEquals("15672x", map.get("port"));
-        Assert.assertEquals("falsex", map.get("useSSL"));
         Assert.assertEquals("X|Custom Metrics|RabbitMQ|", map.get("metricPrefix"));
     }
 
@@ -175,9 +164,22 @@ public class RabbitMQMonitorTest {
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
+        rabbitMonitor.instances = getDefaultInstances();
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
+    }
+    
+    private Instances getDefaultInstances(){
+        Instances instances = new Instances();
+        InstanceInfo  info = new InstanceInfo();
+        info.setHost("localhost");
+        info.setPort(17562);
+        info.setUseSSL(false);
+        InstanceInfo[] arrOfInstances = new InstanceInfo[1];
+        arrOfInstances[0] = info;
+        instances.setInstances(arrOfInstances);
+        return instances;
     }
 
     private void initExpectedClusterMetrics(){

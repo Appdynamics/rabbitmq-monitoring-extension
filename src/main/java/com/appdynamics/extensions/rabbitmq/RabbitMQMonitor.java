@@ -137,6 +137,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         for(InstanceInfo info : instances.getInstances()){
         	SimpleHttpClient client = buildHttpClient(info);
         	try {
+        		argsMap.putAll(getUrlParametersMap(info));
         		String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
         		ArrayNode nodes = getJson(client, nodeUrl);
 
@@ -156,8 +157,9 @@ public class RabbitMQMonitor extends AManagedMonitor {
         		parseOverviewData(overview, nodes);
 
         		logger.info("Completed the RabbitMQ Metric Monitoring task");
-        	} catch (Exception e) {
+        	} catch (Exception e) {  		
         		printCollectiveObservedAverage("Availability", BigInteger.ZERO);
+        		
         		logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         	} finally {
         		try {
@@ -170,7 +172,18 @@ public class RabbitMQMonitor extends AManagedMonitor {
         return new TaskOutput("RabbitMQ Metric Upload Complete ");
     }
 
-    protected ArrayNode getJson(SimpleHttpClient client, String url) {
+    private Map<String,String> getUrlParametersMap(InstanceInfo info) {
+		Map<String,String> map = new HashMap<String, String>();
+		map.put(TaskInputArgs.HOST, info.getHost());
+		map.put(TaskInputArgs.PORT, info.getPort().toString());
+		map.put(TaskInputArgs.USER, info.getUsername());
+		map.put(TaskInputArgs.PASSWORD, info.getPassword());
+		map.put("useSSL", info.getUseSSL().toString());
+		return map;
+		
+	}
+
+	protected ArrayNode getJson(SimpleHttpClient client, String url) {
         ArrayNode json = client.target(url).get().json(ArrayNode.class);
         if (logger.isDebugEnabled()) {
             logger.debug("The url " + url + " responded with a json {}" + json);
@@ -200,6 +213,30 @@ public class RabbitMQMonitor extends AManagedMonitor {
     		argsMap.put(TaskInputArgs.USE_SSL,new Boolean(false).toString());
     	}
 
+    	if(!Strings.isNullOrEmpty(instanceInfo.getUsername())){
+    		argsMap.put(TaskInputArgs.USER, instanceInfo.getUsername());
+    	}
+    	else{
+    		argsMap.put(TaskInputArgs.USER, "guest");
+    	}
+    	if(!Strings.isNullOrEmpty(instanceInfo.getPassword())){
+    		argsMap.put(TaskInputArgs.PASSWORD, instanceInfo.getPassword());
+    	}
+    	else{
+    		argsMap.put(TaskInputArgs.PASSWORD, "guest");
+    	}
+    	if(!Strings.isNullOrEmpty(instanceInfo.getHost())){
+    		argsMap.put(TaskInputArgs.HOST, instanceInfo.getHost());
+    	}
+    	else{
+    		argsMap.put(TaskInputArgs.HOST, "localhost");
+    	}
+    	if(instanceInfo.getPort()!=null){
+    		argsMap.put(TaskInputArgs.PORT, instanceInfo.getPort().toString());
+    	}
+    	else{
+    		argsMap.put(TaskInputArgs.PORT, "15672");
+    	}
     	SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
     	int connectTimeout = 10000,socketTimeout=10000;
     	if(instanceInfo.getConnectTimeout()!=null){
@@ -657,22 +694,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
             newArgsMap = new HashMap<String, String>(argsMapsActual);
         } else {
             newArgsMap = new HashMap<String, String>();
-        }
-        newArgsMap.put("password", CryptoUtil.getPassword(newArgsMap));
-        if (newArgsMap.get("username") == null) {
-            newArgsMap.put("username", "guest");
-        }
-        if (Strings.isNullOrEmpty(newArgsMap.get("password"))) {
-            newArgsMap.put("password", "guest");
-        }
-        if (newArgsMap.get("host") == null) {
-            newArgsMap.put("host", "localhost");
-        }
-        if (newArgsMap.get("port") == null) {
-            newArgsMap.put("port", "15672");
-        }
-        if (newArgsMap.get("useSSL") == null) {
-            newArgsMap.put("useSSL", "false");
         }
         String prefix = newArgsMap.get("metricPrefix");
         if (prefix == null) {

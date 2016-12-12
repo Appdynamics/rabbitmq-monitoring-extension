@@ -12,13 +12,5 @@ instances:
      password: "guest"
      connectTimeout: 10000
      socketTimeout: 10000
-     
-   - host: "localhost"
-     port: 15673
-     useSSL: false
-     username: "guest"
-     password: "guest"
-     connectTimeout: 10000
-     socketTimeout: 10000
  
  
