@@ -7,6 +7,8 @@ import com.appdynamics.extensions.crypto.CryptoUtil;
 import com.appdynamics.extensions.http.SimpleHttpClient;
 import com.appdynamics.extensions.http.SimpleHttpClientBuilder;
 import com.appdynamics.extensions.http.UrlBuilder;
+import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
+import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.util.FileWatcher;
 import com.appdynamics.extensions.yml.YmlReader;
@@ -73,7 +75,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
 
     private boolean initialized;
-    protected QueueGroup[] queueGroups;
+    protected Instances instances = new Instances();
 
     public RabbitMQMonitor() {
         String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
@@ -103,7 +105,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
         logger.info("Initializing the RabbitMQ Configuration");
         final File file = PathResolver.getFile(argsMap.get("config-file"), AManagedMonitor.class);
         if (file != null && file.exists()) {
-            queueGroups = YmlReader.readFromFile(file, QueueGroup[].class);
+            instances = YmlReader.readFromFile(file, Instances.class);
         } else {
             logger.info("The config file is not present at " + argsMap.get("config-file")
                     + ". Only the individual Queue stats will be reported");
@@ -113,7 +115,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
             FileWatcher.watch(file, new FileWatcher.FileChangeListener() {
                 public void fileChanged() {
                     logger.info("The file " + file.getAbsolutePath() + " has changed, reloading the config");
-                    queueGroups = YmlReader.readFromFile(file, QueueGroup[].class);
+                    instances = YmlReader.readFromFile(file, Instances.class);
                 }
             });
         }
@@ -132,36 +134,38 @@ public class RabbitMQMonitor extends AManagedMonitor {
         if (logger.isDebugEnabled()) {
             logger.debug("The arguments after appending the default values are " + argsMap);
         }
-        SimpleHttpClient client = buildHttpClient(argsMap);
-        try {
-            String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
-            ArrayNode nodes = getJson(client, nodeUrl);
+        for(InstanceInfo info : instances.getInstances()){
+        	SimpleHttpClient client = buildHttpClient(info);
+        	try {
+        		String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
+        		ArrayNode nodes = getJson(client, nodeUrl);
 
-            String channelUrl = UrlBuilder.builder(argsMap).path("/api/channels").build();
-            ArrayNode channels = getJson(client, channelUrl);
+        		String channelUrl = UrlBuilder.builder(argsMap).path("/api/channels").build();
+        		ArrayNode channels = getJson(client, channelUrl);
 
-            String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
-            ArrayNode queues = getJson(client, apiUrl);
-            process(nodes, channels, queues);
+        		String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
+        		ArrayNode queues = getJson(client, apiUrl);
+        		process(nodes, channels, queues);
 
-            String federationLinkUrl = UrlBuilder.builder(argsMap).path("/api/federation-links").build();
-            ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl, ArrayNode.class);
-            parseFederationData(federationLinks);
+        		String federationLinkUrl = UrlBuilder.builder(argsMap).path("/api/federation-links").build();
+        		ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl, ArrayNode.class);
+        		parseFederationData(federationLinks);
 
-            String overviewUrl = UrlBuilder.builder(argsMap).path("/api/overview").build();
-            JsonNode overview = getOptionalJson(client, overviewUrl, JsonNode.class);
-            parseOverviewData(overview, nodes);
+        		String overviewUrl = UrlBuilder.builder(argsMap).path("/api/overview").build();
+        		JsonNode overview = getOptionalJson(client, overviewUrl, JsonNode.class);
+        		parseOverviewData(overview, nodes);
 
-            logger.info("Completed the RabbitMQ Metric Monitoring task");
-        } catch (Exception e) {
-            printCollectiveObservedAverage("Availability", BigInteger.ZERO);
-            logger.error("Unexpected error while running the RabbitMQ Monitor", e);
-        } finally {
-            try {
-                client.close();
-            } catch (Exception e) {
-                logger.error("Error while closing the http client", e);
-            }
+        		logger.info("Completed the RabbitMQ Metric Monitoring task");
+        	} catch (Exception e) {
+        		printCollectiveObservedAverage("Availability", BigInteger.ZERO);
+        		logger.error("Unexpected error while running the RabbitMQ Monitor", e);
+        	} finally {
+        		try {
+        			client.close();
+        		} catch (Exception e) {
+        			logger.error("Error while closing the http client", e);
+        		}
+        	}
         }
         return new TaskOutput("RabbitMQ Metric Upload Complete ");
     }
@@ -187,20 +191,25 @@ public class RabbitMQMonitor extends AManagedMonitor {
         }
     }
 
-    private SimpleHttpClient buildHttpClient(Map<String, String> argsMap) {
-        if (argsMap.containsKey("useSSL")) {
-            argsMap.put(TaskInputArgs.USE_SSL, argsMap.get("useSSL"));
-        }
-        SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
-        int connectTimeout = 10000,socketTimeout=10000;
-        if(argsMap.containsKey("connectTimeout")){
-            connectTimeout = Integer.parseInt(argsMap.get("connectTimeout"));
-        }
-        if(argsMap.containsKey("socketTimeout")){
-            socketTimeout = Integer.parseInt(argsMap.get("socketTimeout"));
-        }
-        builder.connectionTimeout(connectTimeout).socketTimeout(socketTimeout);
-        return builder.build();
+    private SimpleHttpClient buildHttpClient(InstanceInfo instanceInfo) {
+    	Map<String,String> argsMap = new HashMap();
+    	if(instanceInfo.getUseSSL()!=null){
+    		argsMap.put(TaskInputArgs.USE_SSL,instanceInfo.getUseSSL().toString());
+    	}
+    	else{
+    		argsMap.put(TaskInputArgs.USE_SSL,new Boolean(false).toString());
+    	}
+
+    	SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
+    	int connectTimeout = 10000,socketTimeout=10000;
+    	if(instanceInfo.getConnectTimeout()!=null){
+    		connectTimeout = instanceInfo.getConnectTimeout().intValue();
+    	}
+    	if(instanceInfo.getSocketTimeout()!=null){
+    		socketTimeout = instanceInfo.getSocketTimeout().intValue();
+    	}
+    	builder.connectionTimeout(connectTimeout).socketTimeout(socketTimeout);
+    	return builder.build();
     }
 
     private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
@@ -292,7 +301,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
     private void parseQueueData(ArrayNode queues) {
         if (queues != null) {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-            GroupStatTracker tracker = new GroupStatTracker(queueGroups);
+            GroupStatTracker tracker = new GroupStatTracker(instances.getQueueGroups());
             for (JsonNode queue : queues) {
 
                 //Rabbit MQ queue names are case sensitive,

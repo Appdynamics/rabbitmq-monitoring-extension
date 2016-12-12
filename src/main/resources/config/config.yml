@@ -10,11 +10,31 @@
 ############
 
 # Uncomment the following lines for configuration
-#- groupName: group1
-#  queueNameRegex: queue.+
-#  showIndividualStats: false
+queueGroups:
+- groupName: group1
+  queueNameRegex: queue.+
+  showIndividualStats: false
 
 # Queue Group Configuration
 #- groupName: group2
 #  queueNameRegex: temp.+
 #  showIndividualStats: false
+
+instances:
+   - host: "localhost"
+     port: 15672
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     connectTimeout: 10000
+     socketTimeout: 10000
+     
+   - host: "localhost"
+     port: 15673
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     connectTimeout: 10000
+     socketTimeout: 10000  
+     
+   

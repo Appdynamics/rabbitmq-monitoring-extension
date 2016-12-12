@@ -1,6 +1,7 @@
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.http.SimpleHttpClient;
+import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
@@ -120,7 +121,7 @@ public class RabbitMQMonitorTest {
         initExpectedGroupMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
-        rabbitMonitor.queueGroups = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), QueueGroup[].class);
+        rabbitMonitor.instances = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), Instances.class);
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
@@ -134,8 +135,8 @@ public class RabbitMQMonitorTest {
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
-        rabbitMonitor.queueGroups = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), QueueGroup[].class);
-        rabbitMonitor.queueGroups[0].setShowIndividualStats(true);
+        rabbitMonitor.instances = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), Instances.class);
+        rabbitMonitor.instances.getQueueGroups()[0].setShowIndividualStats(true);
         rabbitMonitor.execute(new HashMap<String, String>(), null);
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
