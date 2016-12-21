@@ -1,38 +1,24 @@
 package com.appdynamics.extensions.rabbitmq;
 
-import com.appdynamics.TaskInputArgs;
-import com.appdynamics.extensions.ArgumentsValidator;
-import com.appdynamics.extensions.PathResolver;
-import com.appdynamics.extensions.crypto.CryptoUtil;
-import com.appdynamics.extensions.http.SimpleHttpClient;
-import com.appdynamics.extensions.http.SimpleHttpClientBuilder;
-import com.appdynamics.extensions.http.UrlBuilder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+
+import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
-import com.appdynamics.extensions.util.FileWatcher;
-import com.appdynamics.extensions.yml.YmlReader;
+import com.appdynamics.extensions.util.MetricWriteHelper;
+import com.appdynamics.extensions.util.MetricWriteHelperFactory;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
-import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import org.apache.log4j.Logger;
-import org.codehaus.jackson.Base64Variants;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Created with IntelliJ IDEA.
@@ -42,818 +28,196 @@ import java.util.regex.Pattern;
  * To change this template use File | Settings | File Templates.
  */
 public class RabbitMQMonitor extends AManagedMonitor {
-    public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitor");
-    public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
+	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitor");
+	public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
 
-    private String metricPrefix = DEFAULT_METRIC_PREFIX;
-    private static final Map<String, String> defaultArgs = new HashMap<String, String>() {{
-        put("config-file", "monitors/RabbitMQMonitor/config.yml");
-    }};
+	private String metricPrefix = DEFAULT_METRIC_PREFIX;
 
-    //Holds the Key-Description Mapping
-    private Map<String, String> dictionary;
-    //Items in Nodes|<node>|Messages - data looked up from /api/channels
-    private List<String> channelNodeMsgProps = Arrays.asList("ack", "deliver", "deliver_no_ack", "get_no_ack", "publish", "redeliver");
-    //Items in Nodes|<node>|Messages - data looked up from /api/queues
-    private List<String> queueNodeMsgProps = Arrays.asList("messages_ready", "messages_unacknowledged");
-    //Items in Nodes|<node>|Consumers - data looked up from /api/queues
-    private List<String> queueNodeProps = Arrays.asList("consumers");
-    //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues
-    private List<String> queueMessageProps = Arrays.asList("messages_ready", "messages_unacknowledged");
-    private List<String> queueReplicationCountsProps = Arrays.asList("slave_nodes", "synchronised_slave_nodes", "down_slave_nodes");
-    //Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats
-    private List<String> queueMessageStatsProps = Arrays.asList("ack", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver");
-    //Items in Summary|Messages - data looked up from /api/queues
-    private List<String> queueSummaryProps = Arrays.asList("messages_ready", "deliver_get", "publish", "redeliver", "messages_unacknowledged");
-    //Overview Queue Totals
-    private List<String> queueTotalsProps = Arrays.asList("messages", "messages_ready", "messages_unacknowledged");
-    private List<String> messageTotalsProps = Arrays.asList("publish", "ack", "deliver_get", "deliver");
-    private List<String> objectTotalsProps = Arrays.asList("consumers", "queues", "exchanges", "connections", "channels");
+	private MonitorConfiguration configuration;
 
-    //Per Minute Metrics, All these metric suffixes will be reported as per minute also
-    private List<String> perMinMetricSuffixes = Arrays.asList("|Messages|Delivered (Total)", "|Messages|Published", "|Messages|Acknowledged", "|Messages|Redelivered");
-    private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
-
-    private boolean initialized;
-    protected Instances instances = new Instances();
-
-    public RabbitMQMonitor() {
-        String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
-        logger.info(msg);
-        System.out.println(msg);
-        dictionary = new HashMap<String, String>();
-        dictionary.put("ack", "Acknowledged");
-        dictionary.put("deliver", "Delivered");
-        dictionary.put("deliver_get", "Delivered (Total)");
-        dictionary.put("deliver_no_ack", "Delivered No-Ack");
-        dictionary.put("get", "Got");
-        dictionary.put("get_no_ack", "Got No-Ack");
-        dictionary.put("publish", "Published");
-        dictionary.put("redeliver", "Redelivered");
-        dictionary.put("messages_ready", "Available");
-        dictionary.put("messages_unacknowledged", "Pending Acknowledgements");
-        dictionary.put("consumers", "Count");
-        dictionary.put("active_consumers", "Active");
-        dictionary.put("idle_consumers", "Idle");
-        dictionary.put("slave_nodes", "Slaves Count");
-        dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
-        dictionary.put("down_slave_nodes", "Down Slaves Count");
-        dictionary.put("messages", "Messages");
-    }
-
-    private void configure(Map<String, String> argsMap) {
-        logger.info("Initializing the RabbitMQ Configuration");
-        final File file = PathResolver.getFile(argsMap.get("config-file"), AManagedMonitor.class);
-        if (file != null && file.exists()) {
-            instances = YmlReader.readFromFile(file, Instances.class);
-        } else {
-            logger.info("The config file is not present at " + argsMap.get("config-file")
-                    + ". Only the individual Queue stats will be reported");
-        }
-        if (file != null) {
-            //Create a File watcher to auto reload the config
-            FileWatcher.watch(file, new FileWatcher.FileChangeListener() {
-                public void fileChanged() {
-                    logger.info("The file " + file.getAbsolutePath() + " has changed, reloading the config");
-                    instances = YmlReader.readFromFile(file, Instances.class);
-                }
-            });
-        }
-        initialized = true;
-    }
+	//Holds the Key-Description Mapping
+	private Map<String, String> dictionary;
 
 
-    public TaskOutput execute(Map<String, String> argsMap, TaskExecutionContext executionContext) throws TaskExecutionException {
-        argsMap = ArgumentsValidator.validateArguments(argsMap, defaultArgs);
-        if (!initialized) {
-            configure(argsMap);
-        }
-        logger.info("Starting the RabbitMQ Metric Monitoring task");
-        argsMap = checkArgs(argsMap);
-        metricPrefix = argsMap.get("metricPrefix");
-        if (logger.isDebugEnabled()) {
-            logger.debug("The arguments after appending the default values are " + argsMap);
-        }
-        for(InstanceInfo info : instances.getInstances()){
-        	SimpleHttpClient client = buildHttpClient(info);
-        	try {
-        		argsMap.putAll(getUrlParametersMap(info));
-        		String nodeUrl = UrlBuilder.builder(argsMap).path("/api/nodes").build();
-        		ArrayNode nodes = getJson(client, nodeUrl);
 
-        		String channelUrl = UrlBuilder.builder(argsMap).path("/api/channels").build();
-        		ArrayNode channels = getJson(client, channelUrl);
+	private boolean initialized;
+	protected Instances instances = new Instances();
 
-        		String apiUrl = UrlBuilder.builder(argsMap).path("/api/queues").build();
-        		ArrayNode queues = getJson(client, apiUrl);
-        		process(nodes, channels, queues);
-
-        		String federationLinkUrl = UrlBuilder.builder(argsMap).path("/api/federation-links").build();
-        		ArrayNode federationLinks = getOptionalJson(client, federationLinkUrl, ArrayNode.class);
-        		parseFederationData(federationLinks);
-
-        		String overviewUrl = UrlBuilder.builder(argsMap).path("/api/overview").build();
-        		JsonNode overview = getOptionalJson(client, overviewUrl, JsonNode.class);
-        		parseOverviewData(overview, nodes);
-
-        		logger.info("Completed the RabbitMQ Metric Monitoring task");
-        	} catch (Exception e) {  		
-        		printCollectiveObservedAverage("Availability", BigInteger.ZERO);
-        		
-        		logger.error("Unexpected error while running the RabbitMQ Monitor", e);
-        	} finally {
-        		try {
-        			client.close();
-        		} catch (Exception e) {
-        			logger.error("Error while closing the http client", e);
-        		}
-        	}
-        }
-        return new TaskOutput("RabbitMQ Metric Upload Complete ");
-    }
-
-    private Map<String,String> getUrlParametersMap(InstanceInfo info) {
-		Map<String,String> map = new HashMap<String, String>();
-		map.put(TaskInputArgs.HOST, info.getHost());
-		map.put(TaskInputArgs.PORT, info.getPort().toString());
-		map.put(TaskInputArgs.USER, info.getUsername());
-		map.put(TaskInputArgs.PASSWORD, info.getPassword());
-		map.put("useSSL", info.getUseSSL().toString());
-		return map;
-		
+	public RabbitMQMonitor() {
+		String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
+		logger.info(msg);
+		System.out.println(msg);
+		dictionary = new HashMap<String, String>();
+		dictionary.put("ack", "Acknowledged");
+		dictionary.put("deliver", "Delivered");
+		dictionary.put("deliver_get", "Delivered (Total)");
+		dictionary.put("deliver_no_ack", "Delivered No-Ack");
+		dictionary.put("get", "Got");
+		dictionary.put("get_no_ack", "Got No-Ack");
+		dictionary.put("publish", "Published");
+		dictionary.put("redeliver", "Redelivered");
+		dictionary.put("messages_ready", "Available");
+		dictionary.put("messages_unacknowledged", "Pending Acknowledgements");
+		dictionary.put("consumers", "Count");
+		dictionary.put("active_consumers", "Active");
+		dictionary.put("idle_consumers", "Idle");
+		dictionary.put("slave_nodes", "Slaves Count");
+		dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
+		dictionary.put("down_slave_nodes", "Down Slaves Count");
+		dictionary.put("messages", "Messages");
 	}
 
-	protected ArrayNode getJson(SimpleHttpClient client, String url) {
-        ArrayNode json = client.target(url).get().json(ArrayNode.class);
-        if (logger.isDebugEnabled()) {
-            logger.debug("The url " + url + " responded with a json {}" + json);
-        }
-        return json;
-    }
+	private void configure(Map<String, String> argsMap) {
+		logger.info("Initializing the RabbitMQ Configuration");
+		MetricWriteHelper metricWriteHelper = MetricWriteHelperFactory.create(this);
+		if(!Strings.isNullOrEmpty(argsMap.get("metricPrefix"))){
+			metricPrefix = argsMap.get("metricPrefix");
+		}
+		MonitorConfiguration conf = new MonitorConfiguration(metricPrefix, new TaskRunnable(), metricWriteHelper);
+		String configFileName = argsMap.get("config-file");
+		if(Strings.isNullOrEmpty(configFileName)){
+			configFileName = "monitors/RabbitMQMonitor/config.yml";
+		}
+		conf.setConfigYml(configFileName);
+		conf.checkIfInitialized(MonitorConfiguration.ConfItem.CONFIG_YML, MonitorConfiguration.ConfItem.EXECUTOR_SERVICE,
+				MonitorConfiguration.ConfItem.METRIC_PREFIX, MonitorConfiguration.ConfItem.METRIC_WRITE_HELPER);
+		this.configuration = conf;
+		initialized = true;
+	}
 
-    protected <T> T getOptionalJson(SimpleHttpClient client, String url, Class<T> clazz) {
-        try {
-            T json = client.target(url).get().json(clazz);
-            if (logger.isDebugEnabled()) {
-                logger.debug("The url " + url + " responded with a json " + json);
-            }
-            return json;
-        } catch (Exception ex) {
-            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL", ex);
-            return null;
-        }
-    }
+	private class TaskRunnable implements Runnable {
 
-    private SimpleHttpClient buildHttpClient(InstanceInfo instanceInfo) {
-    	Map<String,String> argsMap = new HashMap();
-    	if(instanceInfo.getUseSSL()!=null){
-    		argsMap.put(TaskInputArgs.USE_SSL,instanceInfo.getUseSSL().toString());
-    	}
-    	else{
-    		argsMap.put(TaskInputArgs.USE_SSL,new Boolean(false).toString());
-    	}
+		public void run() {
+			Map<String, ?> config = configuration.getConfigYml();
+			if(config!=null){
+				for(InstanceInfo info : instances.getInstances()){
+					configuration.getExecutorService().execute(new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix));
+				}
+			}
+			else{
+				logger.error("Configuration not found");
+			}
+		}
+	}
+	public TaskOutput execute(Map<String, String> argsMap, TaskExecutionContext executionContext) throws TaskExecutionException {
+		if (!initialized) {
+			configure(argsMap);
+		}
+		initialiseInstances(this.configuration.getConfigYml());
+		logger.info("Starting the RabbitMQ Metric Monitoring task");
+		argsMap = checkArgs(argsMap);
+		if (logger.isDebugEnabled()) {
+			logger.debug("The arguments after appending the default values are " + argsMap);
+		}
+		configuration.executeTask();
+		return new TaskOutput("RabbitMQ Metric Upload Complete ");
+	}
 
-    	if(!Strings.isNullOrEmpty(instanceInfo.getUsername())){
-    		argsMap.put(TaskInputArgs.USER, instanceInfo.getUsername());
-    	}
-    	else{
-    		argsMap.put(TaskInputArgs.USER, "guest");
-    	}
-    	if(!Strings.isNullOrEmpty(instanceInfo.getPassword())){
-    		argsMap.put(TaskInputArgs.PASSWORD, instanceInfo.getPassword());
-    	}
-    	else{
-    		argsMap.put(TaskInputArgs.PASSWORD, "guest");
-    	}
-    	if(!Strings.isNullOrEmpty(instanceInfo.getHost())){
-    		argsMap.put(TaskInputArgs.HOST, instanceInfo.getHost());
-    	}
-    	else{
-    		argsMap.put(TaskInputArgs.HOST, "localhost");
-    	}
-    	if(instanceInfo.getPort()!=null){
-    		argsMap.put(TaskInputArgs.PORT, instanceInfo.getPort().toString());
-    	}
-    	else{
-    		argsMap.put(TaskInputArgs.PORT, "15672");
-    	}
-    	SimpleHttpClientBuilder builder = SimpleHttpClient.builder(argsMap);
-    	int connectTimeout = 10000,socketTimeout=10000;
-    	if(instanceInfo.getConnectTimeout()!=null){
-    		connectTimeout = instanceInfo.getConnectTimeout().intValue();
-    	}
-    	if(instanceInfo.getSocketTimeout()!=null){
-    		socketTimeout = instanceInfo.getSocketTimeout().intValue();
-    	}
-    	builder.connectionTimeout(connectTimeout).socketTimeout(socketTimeout);
-    	return builder.build();
-    }
+	/**
+	 * Defaults the value if not present.
+	 *
+	 * @param argsMapsActual
+	 * @return
+	 */
+	protected Map<String, String> checkArgs(Map<String, String> argsMapsActual) {
+		Map<String, String> newArgsMap;
+		if (argsMapsActual != null) {
+			newArgsMap = new HashMap<String, String>(argsMapsActual);
+		} else {
+			newArgsMap = new HashMap<String, String>();
+		}
+		String prefix = newArgsMap.get("metricPrefix");
+		if (prefix == null) {
+			newArgsMap.put("metricPrefix", RabbitMQMonitor.DEFAULT_METRIC_PREFIX);
+		} else {
+			String trim = prefix.trim();
+			Pattern compile = Pattern.compile("(.+?)(\\|+)");
+			Matcher matcher = compile.matcher(trim);
+			if (matcher.matches()) {
+				trim = matcher.group(1);
+			}
+			newArgsMap.put("metricPrefix", trim + "|");
+		}
+		return newArgsMap;
+	}
 
-    private void process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
-        parseNodeData(nodes, channels, queues);
-        parseQueueData(queues);
-    }
+	private void initialiseInstances(Map<String, ?> configYml) {
+		List<Map<String,?>> instances = (List<Map<String, ?>>) configYml.get("instances");
+		if(instances!=null && instances.size()>0){
+			int index = 0;
+			InstanceInfo[] instancesToSet = new InstanceInfo[instances.size()];
+			for(Map<String,?> instance : instances){
+				InstanceInfo info = new InstanceInfo();
+				if(!Strings.isNullOrEmpty((String) instance.get("host"))){
+					info.setHost((String) instance.get("host"));
+				}
+				else{
+					info.setHost("localhost");
+				}
+				if(!Strings.isNullOrEmpty((String) instance.get("username"))){
+					info.setUsername((String) instance.get("username"));
+				}
+				else{
+					info.setUsername("guest");
+				}
 
-    private void parseOverviewData(JsonNode overview, ArrayNode nodes) {
-        if (overview != null) {
-            JsonNode clusterNode = overview.get("cluster_name");
-            //In some older versions, the node name is different
-            if (clusterNode == null) {
-                clusterNode = overview.get("node");
-            }
-            if (clusterNode != null) {
-                String clusterName = clusterNode.getTextValue();
-                String prefix = "Clusters|" + clusterName + "|";
-                //Queue Totals
-                report(overview.get("message_stats"), messageTotalsProps, prefix + "Messages|", true);
-                report(overview.get("queue_totals"), queueTotalsProps, prefix + "Queues|", true);
-                report(overview.get("object_totals"), objectTotalsProps, prefix + "Objects|", false);
+				if(!Strings.isNullOrEmpty((String) instance.get("password"))){
+					info.setPassword((String) instance.get("username"));
+				}
+				else{
+					info.setPassword("guest");
+				}
+				if(instance.get("port")!=null){
+					info.setPort((Integer) instance.get("port"));
+				}
+				else{
+					info.setPort(15672);
+				}
+				if(instance.get("useSSL")!=null){
+					info.setUseSSL((Boolean) instance.get("useSSL"));
+				}
+				else{
+					info.setUseSSL(false);
+				}
+				if(instance.get("connectTimeout")!=null){
+					info.setConnectTimeout((Integer) instance.get("connectTimeout"));
+				}
+				else{
+					info.setConnectTimeout(10000);
+				}
+				if(instance.get("socketTimeout")!=null){
+					info.setSocketTimeout((Integer) instance.get("connectTimeout"));
+				}
+				else{
+					info.setSocketTimeout(10000);
+				}
+				instancesToSet[index++] = info;
+			}
+			this.instances.setInstances(instancesToSet);
+		}
+		else{
+			logger.error("no instances configured");
+		}
+		List<Map<String,?>> queueGroups = (List<Map<String, ?>>) configYml.get("queueGroups");
+		if(queueGroups!=null && queueGroups.size()>0){
+			int index = 0;
+			QueueGroup[] groups =new QueueGroup[queueGroups.size()];
+			for(Map<String,?> group : queueGroups){
+				QueueGroup g = new QueueGroup();
+				g.setGroupName((String) group.get("groupName"));
+				g.setQueueNameRegex((String) group.get("queueNameRegex"));
+				g.setShowIndividualStats((Boolean) group.get("showIndividualStats"));
+				groups[index++] = g;
+			}
+			this.instances.setQueueGroups(groups);
+		}
+		else{
+			logger.debug("no queue groups defined");
+		}
 
-                //Total Nodes
-                String nodePrefix = prefix + "Nodes|";
-                if (nodes != null) {
-                    printCollectiveObservedAverage(nodePrefix + "Total", new BigInteger(String.valueOf(nodes.size())));
-                    int runningCount = 0;
-                    for (JsonNode node : nodes) {
-                        Boolean running = getBooleanValue("running", node);
-                        if (running != null && running) {
-                            runningCount++;
-                        }
-                    }
-                    printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)));
-                    if (runningCount < nodes.size()) {
-                        printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
-                    } else {
-                        printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ONE);
-                    }
-                } else{
-                    // If there are no nodes running
-                    printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
-                }
-                printCollectiveObservedAverage("Availability", BigInteger.ONE);
-            }
-        } else {
-            printCollectiveObservedAverage("Availability", BigInteger.ZERO);
-        }
-    }
+	}
 
-    private void report(JsonNode node, List<String> fields, String metricPrefix, boolean useDictionary) {
-        if (node != null && fields != null) {
-            for (String field : fields) {
-                JsonNode valueNode = node.get(field);
-                if (valueNode != null) {
-                    if (useDictionary) {
-                        printCollectiveObservedCurrent(metricPrefix + dictionary.get(field), valueNode.getBigIntegerValue());
-                    } else {
-                        printCollectiveObservedCurrent(metricPrefix + field, valueNode.getBigIntegerValue());
-                    }
-                }
-            }
-        } else {
-            logger.debug("Not reporting the " + metricPrefix + " since the node is null");
-        }
-    }
-
-    private void parseFederationData(ArrayNode federationLinks) {
-        String prefix = "Federations|";
-        if (federationLinks != null) {
-            for (JsonNode federationLink : federationLinks) {
-                final String exchangeName = getStringValue("exchange", federationLink);
-                final String upstreamName = getStringValue("upstream", federationLink);
-                final String status = getStringValue("status", federationLink);
-                printMetric(prefix + exchangeName + "|" + upstreamName + "|running", BigInteger.valueOf(status.equals("running") ? 1 : 0),
-                        MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                        MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                        MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-                );
-            }
-        }
-    }
-
-    /**
-     * Iterate over the available queue.message_status. The prefix will be Queues|$host|$QName
-     *
-     * @param queues
-     */
-    private void parseQueueData(ArrayNode queues) {
-        if (queues != null) {
-            Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-            GroupStatTracker tracker = new GroupStatTracker(instances.getQueueGroups());
-            for (JsonNode queue : queues) {
-
-                //Rabbit MQ queue names are case sensitive,
-                // however the controller bombs when there are 2 metrics with same name in different cases.
-                String qName = lower(getStringValue("name", queue, "Default"));
-                String vHost = getStringValue("vhost", queue, "Default");
-                if (vHost.equals("/")) {
-                    vHost = "Default";
-                }
-                GroupStat groupStat = tracker.getGroupStat(vHost, qName);
-                boolean showIndividualStats = groupStat.isShowIndividualStats();
-                String prefix = "Queues|" + vHost + "|" + qName;
-                String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName();
-                BigInteger consumers = getBigIntegerValue("consumers", queue, 0);
-                if (showIndividualStats) {
-                    printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
-                }
-                groupStat.add(groupPrefix + "|Consumers", consumers);
-                String msgPrefix = prefix + "|Messages|";
-                String grpMsgPrefix = groupPrefix + "|Messages|";
-                for (String prop : queueMessageProps) {
-                    BigInteger value = getBigIntegerValue(prop, queue, 0);
-                    String metricName = getPropDesc(prop);
-                    if (showIndividualStats) {
-                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
-                    }
-                    groupStat.add(grpMsgPrefix + metricName, value);
-                    addToMap(valueMap, prop, value);
-                }
-                String replicationPrefix = prefix + "|Replication|";
-                for (String prop : queueReplicationCountsProps) {
-                    BigInteger value = getChildrenCount(prop, queue, 0);
-                    String metricName = getPropDesc(prop);
-                    if (showIndividualStats) {
-                        printCollectiveObservedCurrent(replicationPrefix + metricName, value);
-                    }
-                }
-
-                //Fetch data from message_stats object
-                JsonNode msgStats = queue.get("message_stats");
-                for (String prop : queueMessageStatsProps) {
-                    BigInteger value = getBigIntegerValue(prop, msgStats, 0);
-                    String metricName = getPropDesc(prop);
-                    if (showIndividualStats) {
-                        printCollectiveObservedCurrent(msgPrefix + metricName, value);
-                    }
-                    groupStat.add(grpMsgPrefix + metricName, value);
-                    addToMap(valueMap, prop, value);
-                }
-            }
-            //Aggregate the above data for Summary|Messages
-            String summaryPrefix = "Summary|Messages|";
-            for (String prop : queueSummaryProps) {
-                BigInteger value = valueMap.get(prop);
-                printCollectiveObservedCurrent(summaryPrefix + getPropDesc(prop), value);
-            }
-            //Total Number of Queues
-            printCollectiveObservedCurrent("Summary|Queues", new BigInteger(String.valueOf(queues.size())));
-
-            //Print the regex queue group metrics
-            Collection<GroupStat> groupStats = tracker.getGroupStats();
-            if (groupStats != null) {
-                for (GroupStat groupStat : groupStats) {
-                    Map<String, BigInteger> groupValMap = groupStat.getValueMap();
-                    for (String metric : groupValMap.keySet()) {
-                        printCollectiveObservedCurrent(metric, groupValMap.get(metric));
-                    }
-                }
-            }
-        } else {
-            printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
-        }
-    }
-
-    private BigInteger getChildrenCount(String prop, JsonNode node, int defaultValue) {
-        if (node != null) {
-            final JsonNode metricNode = node.get(prop);
-            if (metricNode != null && metricNode instanceof ArrayNode) {
-                final ArrayNode arrayOfChildren = (ArrayNode) metricNode;
-                return BigInteger.valueOf(arrayOfChildren.size());
-            }
-        }
-        return BigInteger.valueOf(defaultValue);
-    }
-
-    private String lower(String value) {
-        if (value != null) {
-            return value.toLowerCase();
-        }
-        return value;
-    }
-
-    /**
-     * Gets the Description of the key from the dictionary.
-     *
-     * @param key
-     * @return
-     */
-    private String getPropDesc(String key) {
-        String name = dictionary.get(key);
-        if (name == null) {
-            name = key;
-        }
-        return name;
-    }
-
-    /**
-     * The data in the prefix Nodes|$node and Summary|
-     *
-     * @param nodes
-     * @param channels
-     * @param queues
-     */
-    private void parseNodeData(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
-        if (nodes != null) {
-            for (JsonNode node : nodes) {
-                String name = getStringValue("name", node);
-                if (name != null) {
-                    List<JsonNode> nodeChannels = getChannels(channels, name);
-                    List<JsonNode> nodeQueues = getQueues(queues, name);
-                    String prefix = "Nodes|" + name;
-                    BigInteger procUsed = getBigIntegerValue("proc_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|Erlang Processes", procUsed);
-                    printCollectiveObservedCurrent(prefix + "|Disk Free Alarm Activated", getNumericValueForBoolean("disk_free_alarm", node, -1));
-                    printCollectiveObservedCurrent(prefix + "|Memory Free Alarm Activated", getNumericValueForBoolean("mem_alarm", node, -1));
-                    BigInteger fdUsed = getBigIntegerValue("fd_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|File Descriptors", fdUsed);
-                    BigInteger memUsed = getBigIntegerValue("mem_used", node, 0);
-                    int round = (int) Math.round(memUsed.intValue() / (1024D * 1024D));
-                    printCollectiveObservedCurrent(prefix + "|Memory(MB)", new BigInteger(String.valueOf(round)));
-                    BigInteger sockUsed = getBigIntegerValue("sockets_used", node, 0);
-                    printCollectiveObservedCurrent(prefix + "|Sockets", sockUsed);
-                    printCollectiveObservedCurrent(prefix + "|Channels|Count", new BigInteger(String.valueOf(nodeChannels.size())));
-                    printCollectiveObservedCurrent(prefix + "|Channels|Blocked", getBlockedChannelCount(nodeChannels));
-                    //Nodes|$node|Messages
-                    addChannelMessageProps(prefix + "|Messages", nodeChannels);
-                    //Nodes|$node|Messages
-                    addQueueMessageProps(prefix + "|Messages", nodeQueues);
-                    //Nodes|$node|Consumers
-                    addQueueProps(prefix + "|Consumers", nodeQueues);
-                }
-            }
-        }
-        writeTotalChannelCount(channels);
-        writeTotalConsumerCount(queues);
-
-    }
-
-    private BigInteger getNumericValueForBoolean(String key, JsonNode node, int defaultValue) {
-        final Boolean booleanValue = getBooleanValue(key, node);
-        if (booleanValue == null) {
-            return BigInteger.valueOf(defaultValue);
-        } else {
-            return booleanValue.booleanValue() ? BigInteger.ONE : BigInteger.ZERO;
-        }
-    }
-
-    /**
-     * Total Consumers for the Server = Sum of all consumers of all Queues
-     *
-     * @param queues
-     */
-    private void writeTotalConsumerCount(ArrayNode queues) {
-        BigInteger count = new BigInteger("0");
-        if (queues != null) {
-            for (JsonNode queue : queues) {
-                BigInteger value = getBigIntegerValue("consumers", queue, 0);
-                count = count.add(value);
-            }
-        }
-        printCollectiveObservedCurrent("Summary|Consumers", new BigInteger(String.valueOf(count)));
-    }
-
-    /**
-     * Total cont of Channels for the server.
-     *
-     * @param channels
-     */
-    private void writeTotalChannelCount(ArrayNode channels) {
-        long channelCount;
-        if (channels != null) {
-            channelCount = channels.size();
-        } else {
-            channelCount = 0;
-        }
-        printCollectiveObservedCurrent("Summary|Channels", new BigInteger(String.valueOf(channelCount)));
-    }
-
-    private void addQueueProps(String metricPrefix, List<JsonNode> nodeQueues) {
-        Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-        for (JsonNode queue : nodeQueues) {
-            for (String prop : queueNodeProps) {
-                BigInteger value = getBigIntegerValue(prop, queue);
-                addToMap(valueMap, prop, value);
-            }
-        }
-        uploadMetricValues(metricPrefix, valueMap);
-        //TODO what to do with the count?
-    }
-
-    /**
-     * Goes into Nodes|$node|Messages
-     *
-     * @param metricPrefix
-     * @param nodeQueues
-     */
-    private void addQueueMessageProps(String metricPrefix, List<JsonNode> nodeQueues) {
-        Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-        for (JsonNode queue : nodeQueues) {
-            for (String prop : queueNodeMsgProps) {
-                BigInteger value = getBigIntegerValue(prop, queue);
-                addToMap(valueMap, prop, value);
-            }
-        }
-        uploadMetricValues(metricPrefix, valueMap);
-    }
-
-    /**
-     * Goes into Nodes|$node|Messages
-     *
-     * @param metricPrefix
-     * @param nodeChannels
-     */
-    private void addChannelMessageProps(String metricPrefix, List<JsonNode> nodeChannels) {
-        Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-        for (JsonNode channel : nodeChannels) {
-            JsonNode msgStats = channel.get("message_stats");
-            for (String prop : channelNodeMsgProps) {
-                if (msgStats != null) {
-                    BigInteger statVal = getBigIntegerValue(prop, msgStats, 0);
-                    addToMap(valueMap, prop, statVal);
-                }
-            }
-        }
-        uploadMetricValues(metricPrefix, valueMap);
-    }
-
-    /**
-     * Iterates over the map and writes it to the metric writer.
-     *
-     * @param metricPrefix
-     * @param valueMap
-     */
-    private void uploadMetricValues(String metricPrefix, Map<String, BigInteger> valueMap) {
-        for (String key : valueMap.keySet()) {
-            String name = getPropDesc(key);
-            BigInteger value = valueMap.get(key);
-            printCollectiveObservedCurrent(metricPrefix + "|" + name, value);
-        }
-    }
-
-    /**
-     * Adds the value to the Map. If the value is present it adds to the current value.
-     * The map is used to calculate the aggregate.
-     *
-     * @param valueMap
-     * @param prop
-     * @param val
-     */
-    private void addToMap(Map<String, BigInteger> valueMap, String prop, BigInteger val) {
-        if (val != null) {
-            BigInteger curr = valueMap.get(prop);
-            if (curr == null) {
-                valueMap.put(prop, val);
-            } else {
-                valueMap.put(prop, curr.add(val));
-            }
-        }
-    }
-
-    /**
-     * Nodes|$node|Channels|Blocked
-     *
-     * @param nodeChannels
-     * @return
-     */
-    private BigInteger getBlockedChannelCount(List<JsonNode> nodeChannels) {
-        int blocked = 0;
-        for (JsonNode nodeChannel : nodeChannels) {
-            Boolean value = getBooleanValue("client_flow_blocked", nodeChannel);
-            if (value != null && value) {
-                blocked++;
-            }
-        }
-        return new BigInteger(String.valueOf(blocked));
-    }
-
-    /**
-     * Get a list of channels for the give node.
-     *
-     * @param channels
-     * @param nodeName
-     * @return
-     */
-    private List<JsonNode> getChannels(ArrayNode channels, String nodeName) {
-        List<JsonNode> nodeChannels = new ArrayList<JsonNode>();
-        if (channels != null && nodeName != null) {
-            for (JsonNode channel : channels) {
-                if (nodeName.equalsIgnoreCase(getStringValue("node", channel))) {
-                    nodeChannels.add(channel);
-                }
-            }
-        }
-        return nodeChannels;
-    }
-
-    /**
-     * Get a list of queues for the give node.
-     *
-     * @param queues
-     * @param nodeName
-     * @return
-     */
-    private List<JsonNode> getQueues(ArrayNode queues, String nodeName) {
-        List<JsonNode> nodeQueues = new ArrayList<JsonNode>();
-        if (queues != null && nodeName != null) {
-            for (JsonNode queue : queues) {
-                if (nodeName.equalsIgnoreCase(getStringValue("node", queue))) {
-                    nodeQueues.add(queue);
-                }
-            }
-        }
-        return nodeQueues;
-    }
-
-
-    private String buildBaseUrl(Map<String, String> argsMap) {
-        StringBuilder sb = new StringBuilder();
-        String useSSL = argsMap.get("useSSL");
-        if (useSSL.equalsIgnoreCase("true")) {
-            sb.append("https://");
-        } else {
-            sb.append("http://");
-        }
-        sb.append(argsMap.get("host")).append(":");
-        sb.append(argsMap.get("port")).append("/");
-        sb.append("api");
-        if (logger.isDebugEnabled()) {
-            logger.debug("Base URL initialized to " + sb.toString());
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Defaults the value if not present.
-     *
-     * @param argsMapsActual
-     * @return
-     */
-    protected Map<String, String> checkArgs(Map<String, String> argsMapsActual) {
-        Map<String, String> newArgsMap;
-        if (argsMapsActual != null) {
-            newArgsMap = new HashMap<String, String>(argsMapsActual);
-        } else {
-            newArgsMap = new HashMap<String, String>();
-        }
-        String prefix = newArgsMap.get("metricPrefix");
-        if (prefix == null) {
-            newArgsMap.put("metricPrefix", DEFAULT_METRIC_PREFIX);
-        } else {
-            String trim = prefix.trim();
-            Pattern compile = Pattern.compile("(.+?)(\\|+)");
-            Matcher matcher = compile.matcher(trim);
-            if (matcher.matches()) {
-                trim = matcher.group(1);
-            }
-            newArgsMap.put("metricPrefix", trim + "|");
-        }
-        return newArgsMap;
-    }
-
-    /**
-     * @param urlStr
-     * @param encodedUserPass
-     * @return
-     */
-    public ArrayNode invokeApi(String urlStr, String encodedUserPass) {
-        InputStream in = null;
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            URL url = new URL(urlStr);
-            URLConnection connection = url.openConnection();
-            connection.setRequestProperty("Authorization", "Basic " + encodedUserPass);
-            connection.setRequestProperty("Accept", "application/json");
-            in = connection.getInputStream();
-            ArrayNode nodes = mapper.readValue(in, ArrayNode.class);
-            if (logger.isDebugEnabled()) {
-                logger.debug("The api " + urlStr + " returned the json " + nodes);
-            }
-            return nodes;
-        } catch (IOException e) {
-            logger.error("Exception while invoking the api at " + urlStr, e);
-            return null;
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                }
-            }
-        }
-    }
-
-    public void printMetric(String metricName, BigInteger metricValue, String aggregation, String timeRollup, String cluster) {
-        MetricWriter metricWriter = getMetricWriter(metricPrefix + metricName,
-                aggregation,
-                timeRollup,
-                cluster
-        );
-        String value;
-        if (metricValue != null) {
-            value = metricValue.toString();
-        } else {
-            value = "0";
-        }
-        if (logger.isDebugEnabled()) {
-            logger.debug("Sending [" + aggregation + "/" + timeRollup + "/" + cluster
-                    + "] metric = " + metricPrefix + metricName + " = " + value);
-        }
-        metricWriter.printMetric(value);
-
-    }
-
-    private void printCollectiveObservedCurrent(String metricName, BigInteger metricValue) {
-        printMetric(metricName, metricValue,
-                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-        );
-        if (metricValue != null) {
-            for (String suffix : perMinMetricSuffixes) {
-                if (metricName.endsWith(suffix)) {
-                    BigInteger value = perMinMetricsMap.get(metricName);
-                    if (value != null) {
-                        BigInteger diff = metricValue.subtract(value);
-                        printCollectiveObservedAverage(metricName + " Per Minute", diff);
-                    }
-                    perMinMetricsMap.put(metricName, metricValue);
-                }
-            }
-        }
-    }
-
-    protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue) {
-        printMetric(metricName, metricValue,
-                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-        );
-    }
-
-    protected void printIndividualObservedAverage(String metricName, BigInteger metricValue) {
-        printMetric(metricName, metricValue,
-                MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-                MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-                MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
-        );
-    }
-
-    private String getStringValue(String propName, JsonNode node) {
-        JsonNode jsonNode = node.get(propName);
-        if (jsonNode != null) {
-            return jsonNode.getTextValue();
-        }
-        return null;
-    }
-
-    private String getStringValue(String propName, JsonNode node, String defaultVal) {
-        String value = getStringValue(propName, node);
-        return value != null ? value : defaultVal;
-    }
-
-    private Boolean getBooleanValue(String propName, JsonNode node) {
-        JsonNode jsonNode = node.get(propName);
-        if (jsonNode != null) {
-            return jsonNode.getBooleanValue();
-        }
-        return null;
-    }
-
-    private BigInteger getBigIntegerValue(String propName, JsonNode node) {
-        if (node != null) {
-            JsonNode jsonNode = node.get(propName);
-            if (jsonNode != null) {
-                try {
-                    return jsonNode.getBigIntegerValue();
-                } catch (Exception e) {
-                    logger.warn("Cannot get the int value of the property "
-                            + propName + " value is " + jsonNode.getTextValue());
-                }
-            }
-        }
-        return null;
-    }
-
-    private BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
-        BigInteger value = getBigIntegerValue(propName, node);
-        return value != null ? value : new BigInteger(String.valueOf(defaultVal));
-    }
-
-    /**
-     * Encodes the Username and Password using Base64 encoding.
-     *
-     * @param argsMap Expected to contain the use and password
-     * @return
-     */
-    private String encodeUserPass(Map<String, String> argsMap) {
-        String username = argsMap.get("username");
-        String password = argsMap.get("password");
-        StringBuilder sb = new StringBuilder();
-        sb.append(username).append(":").append(password);
-        return Base64Variants.MIME.encode(sb.toString().getBytes());
-    }
-
-    public static String getImplementationVersion() {
-        return RabbitMQMonitor.class.getPackage().getImplementationTitle();
-    }
+	public static String getImplementationVersion() {
+		return RabbitMQMonitor.class.getPackage().getImplementationTitle();
+	}
 }

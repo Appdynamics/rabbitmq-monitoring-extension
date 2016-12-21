@@ -7,8 +7,8 @@ public class InstanceInfo {
 	private Boolean useSSL;
 	private String username;
 	private String password;
-	private Long connectTimeout;
-	private Long socketTimeout;
+	private Integer connectTimeout;
+	private Integer socketTimeout;
 	public String getHost() {
 		return host;
 	}
@@ -39,17 +39,18 @@ public class InstanceInfo {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-	public Long getConnectTimeout() {
+	public Integer getConnectTimeout() {
 		return connectTimeout;
 	}
-	public void setConnectTimeout(Long connectTimeout) {
+	public void setConnectTimeout(Integer connectTimeout) {
 		this.connectTimeout = connectTimeout;
 	}
-	public Long getSocketTimeout() {
+	public Integer getSocketTimeout() {
 		return socketTimeout;
 	}
-	public void setSocketTimeout(Long socketTimeout) {
+	public void setSocketTimeout(Integer socketTimeout) {
 		this.socketTimeout = socketTimeout;
 	}
+
 
 }
