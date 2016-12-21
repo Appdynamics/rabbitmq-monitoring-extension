@@ -142,7 +142,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 	}
 
 	private void initialiseInstances(Map<String, ?> configYml) {
-		List<Map<String,?>> instances = (List<Map<String, ?>>) configYml.get("instances");
+		List<Map<String,?>> instances = (List<Map<String, ?>>) configYml.get("servers");
 		if(instances!=null && instances.size()>0){
 			int index = 0;
 			InstanceInfo[] instancesToSet = new InstanceInfo[instances.size()];
