@@ -19,7 +19,9 @@ import org.mockito.stubbing.Answer;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.http.SimpleHttpClient;
 import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
+import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.appdynamics.extensions.yml.YmlReader;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 
 import static org.mockito.Matchers.*;
@@ -29,10 +31,11 @@ public class RabbitMQMonitoringTaskTest {
 	private RabbitMQMonitoringTask task;
 	public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
 	private Map<String, String> expectedValueMap = new HashMap<String, String>();
-
+	private Map<String,String> dictionary = new HashMap<String, String>();
 	@Before
 	public void before(){
 		task = Mockito.spy(new RabbitMQMonitoringTask());
+        initDictionary();
 			doAnswer(new Answer(){
 
 			public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -88,6 +91,7 @@ public class RabbitMQMonitoringTaskTest {
 	}
     @Test
     public void testNoGroups() throws TaskExecutionException, InterruptedException {
+    	expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedQueueMetrics();
@@ -102,14 +106,98 @@ public class RabbitMQMonitoringTaskTest {
         info.setPassword("");
         info.setUseSSL(false);
         task.setInfo(info);
-       
+        task.setDictionary(dictionary);
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
     
-    private void initExpectedClusterMetrics(){
+    @Test
+    public void testWithGroupsNoIndividual() throws TaskExecutionException {
+    	expectedValueMap = new HashMap<String, String>();
+        initExpectedNodeMetrics();
+        initExpectedSummaryMetrics();
+        initExpectedGroupMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
+        Instances instances = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), Instances.class);
+        
+        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
+        task.setConfiguration(conf);
+        task.setDictionary(dictionary);
+        task.setInfo(instances.getInstances()[0]);
+        task.setQueueGroups(instances.getQueueGroups());
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        task.run();
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
+                , expectedValueMap.isEmpty());
+    }
+    
+    @Test
+    public void testWithGroupsWithIndividual() throws TaskExecutionException {
+    	expectedValueMap = new HashMap<String, String>();
+        initExpectedNodeMetrics();
+        initExpectedSummaryMetrics();
+        initExpectedGroupMetrics();
+        initExpectedQueueMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
+        Instances instances = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), Instances.class);
+        instances.getQueueGroups()[0].setShowIndividualStats(true);
+        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
+        task.setConfiguration(conf);
+        task.setDictionary(dictionary);
+        task.setInfo(instances.getInstances()[0]);
+        task.setQueueGroups(instances.getQueueGroups());
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        task.run();
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
+                , expectedValueMap.isEmpty());
+    }
+    
+    @Test
+    public void checkReturnsFederationStatusWhenAvailable() throws TaskExecutionException {
+    	expectedValueMap = new HashMap<String, String>();
+        initExpectedNodeMetrics();
+        initExpectedSummaryMetrics();
+        initExpectedQueueMetrics();
+        initExpectedFederationMetrics();
+        initExpectedClusterMetrics();
+        Instances instances = YmlReader.read(getClass().getResourceAsStream("/test-config.yml"), Instances.class);
+        
+        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
+        task.setConfiguration(conf);
+        task.setDictionary(dictionary);
+        task.setInfo(instances.getInstances()[0]);
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        task.run();
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
+                , expectedValueMap.isEmpty());
+    }
+    
+    private void initDictionary() {
+		dictionary = new HashMap<String, String>();
+		dictionary.put("ack", "Acknowledged");
+		dictionary.put("deliver", "Delivered");
+		dictionary.put("deliver_get", "Delivered (Total)");
+		dictionary.put("deliver_no_ack", "Delivered No-Ack");
+		dictionary.put("get", "Got");
+		dictionary.put("get_no_ack", "Got No-Ack");
+		dictionary.put("publish", "Published");
+		dictionary.put("redeliver", "Redelivered");
+		dictionary.put("messages_ready", "Available");
+		dictionary.put("messages_unacknowledged", "Pending Acknowledgements");
+		dictionary.put("consumers", "Count");
+		dictionary.put("active_consumers", "Active");
+		dictionary.put("idle_consumers", "Idle");
+		dictionary.put("slave_nodes", "Slaves Count");
+		dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
+		dictionary.put("down_slave_nodes", "Down Slaves Count");
+		dictionary.put("messages", "Messages");
+		
+	}
+	private void initExpectedClusterMetrics(){
         expectedValueMap.put("Clusters|rabbit@rabbit1|Messages|Published","41");
         expectedValueMap.put("Clusters|rabbit@rabbit1|Messages|Acknowledged","42");
         expectedValueMap.put("Clusters|rabbit@rabbit1|Messages|Delivered (Total)","43");
