@@ -31,6 +31,46 @@ import com.singularity.ee.agent.systemagent.api.MetricWriter;
 public class RabbitMQMonitoringTask implements Runnable{
 	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitorTask");
 
+	public MonitorConfiguration getConfiguration() {
+		return configuration;
+	}
+
+	public void setConfiguration(MonitorConfiguration configuration) {
+		this.configuration = configuration;
+	}
+
+	public InstanceInfo getInfo() {
+		return info;
+	}
+
+	public void setInfo(InstanceInfo info) {
+		this.info = info;
+	}
+
+	public Map<String, String> getDictionary() {
+		return dictionary;
+	}
+
+	public void setDictionary(Map<String, String> dictionary) {
+		this.dictionary = dictionary;
+	}
+
+	public QueueGroup[] getQueueGroups() {
+		return queueGroups;
+	}
+
+	public void setQueueGroups(QueueGroup[] queueGroups) {
+		this.queueGroups = queueGroups;
+	}
+
+	public String getMetricPrefix() {
+		return metricPrefix;
+	}
+
+	public void setMetricPrefix(String metricPrefix) {
+		this.metricPrefix = metricPrefix;
+	}
+
 	private MonitorConfiguration configuration;
 
 	private InstanceInfo info;
@@ -42,12 +82,14 @@ public class RabbitMQMonitoringTask implements Runnable{
 	private String metricPrefix;
 
 	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix){
+		this();
 		this.configuration = conf;
 		this.info = info;
 		this.dictionary = dictionary;
 		this.queueGroups = queueGroups;
 		this.metricPrefix = metricPrefix;
 	}
+	public RabbitMQMonitoringTask(){};
 
 	//Items in Nodes|<node>|Messages - data looked up from /api/channels
 	private List<String> channelNodeMsgProps = Arrays.asList("ack", "deliver", "deliver_no_ack", "get_no_ack", "publish", "redeliver");
@@ -93,7 +135,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 			parseOverviewData(overview, nodes);
 
 			logger.info("Completed the RabbitMQ Metric Monitoring task");
-		} catch (Exception e) {  		
+		} catch (Exception e) {  
+			e.printStackTrace();
 			printCollectiveObservedAverage("Availability", BigInteger.ZERO);
 
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
