@@ -89,6 +89,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		this.dictionary = dictionary;
 		this.queueGroups = queueGroups;
 		this.metricPrefix = metricPrefix;
+		this.metricPrefix = metricPrefix + info.getDisplayName() + "|";
 	}
 	public RabbitMQMonitoringTask(){};
 
