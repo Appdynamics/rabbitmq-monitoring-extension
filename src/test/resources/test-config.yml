@@ -1,4 +1,16 @@
 # Queue Group Configuration
+queueGroups:
 - groupName: group1
   queueNameRegex: queue.+
   showIndividualStats: false
+  
+instances:
+   - host: "localhost"
+     port: 15672
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     connectTimeout: 10000
+     socketTimeout: 10000
+ 
+ 

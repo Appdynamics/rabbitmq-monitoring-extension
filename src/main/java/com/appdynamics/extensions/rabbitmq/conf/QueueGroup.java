@@ -7,7 +7,7 @@ public class QueueGroup {
 
     private String groupName;
     private String queueNameRegex;
-    private boolean showIndividualStats;
+    private Boolean showIndividualStats;
 
     public String getGroupName() {
         return groupName;
