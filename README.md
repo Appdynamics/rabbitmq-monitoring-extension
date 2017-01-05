@@ -13,17 +13,55 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 
 1. Run "mvn clean install"
 2. Download and unzip the file 'target/RabbitMQMonitor.zip' to \<machineagent install dir\>/monitors
-3. Open monitor.xml and configure the RabbitMQ arguments.
-<pre>
+3. Configure the config.yml. A sample config is as follows :
+
+
+``` yaml
+############
+## Queue Group Configuration. The queue stats will be grouped by the 'groupName'
+## if the 'queueNameRegex' matches the name of the Queue.
+
+## groupName            The stats from Queues matched by the 'queueNameRegex' will be reported under this name
+## queueNameRegex       A Regex to match the Queue Name
+## showIndividualStats  If set to false then the Individual Queue stats will not be reported.
+##                      This will help if there are several short lived queues and an explosion of metrics
+##                      in the controller can be avoided
+############
+
+# Uncomment the following lines for configuration
+queueGroups:
+- groupName: group1
+  queueNameRegex: queue.+
+  showIndividualStats: false
+
+# Queue Group Configuration
+#- groupName: group2
+#  queueNameRegex: temp.+
+#  showIndividualStats: false
+
+####### RabbitMQ Server Instances. You can configure multiple instances as follows to report metrics from #######
+servers:
+   - host: "localhost"
+     port: 15672
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     ##passwordEncrypted : Encrypted Password to be used
+     ##encryptionKey : If encrypted password set, supply the key here
+     connectTimeout: 10000
+     socketTimeout: 10000
+     
+   - host: "localhost"
+     port: 15673
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     connectTimeout: 10000
+     socketTimeout: 10000  
+
+# number of concurrent tasks
+numberOfThreads: 5
 ```
-<argument name="host" is-required="true" default-value="localhost"/>
-<argument name="port" is-required="true" default-value="15672"/>
-<argument name="useSSL" is-required="true" default-value="false"/>
-<argument name="username" is-required="true" default-value="guest"/>
-<argument name="password" is-required="true" default-value="guest"/>
-<argument name="metricPrefix" is-required="true" default-value="Custom Metrics|RabbitMQ|"/>
-```
-</pre>
 
 ##Metrics
 The following metrics are reported. The Metric Path is relative to the "metricPrefix" defined in the monitor.xml
@@ -68,13 +106,11 @@ The following metrics are reported. The Metric Path is relative to the "metricPr
 
 ##Password Encryption Support 
 
-To avoid setting the clear text password in the monitor.xml. Please follow the process to encrypt the password and set the encrypted password and the key in the monitor.xml 
+To avoid setting the clear text password in the config.yml. Please follow the process to encrypt the password and set the encrypted password and the key in the config.yml
 1. Download the util jar to encrypt the password from here 
 2. Encrypt password from the commandline 
 java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword 
-3. Add the properties in the monitor.xml. Substitute the default-value 
-<argument name="password-encrypted" is-required="true" default-value="<ENCRYPTED_PASSWORD>"/> 
-<argument name="encryption-key" is-required="false" default-value="myKey"/>
+3. Add the properties in the config.yml. See sample config above
 
 
 #Custom Dashboard
