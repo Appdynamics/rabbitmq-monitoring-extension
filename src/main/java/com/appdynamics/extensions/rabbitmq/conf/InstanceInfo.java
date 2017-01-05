@@ -9,6 +9,7 @@ public class InstanceInfo {
 	private String password;
 	private Integer connectTimeout;
 	private Integer socketTimeout;
+	private String displayName;
 	public String getHost() {
 		return host;
 	}
@@ -63,13 +64,17 @@ public class InstanceInfo {
 		builder.append("|");
 		builder.append(" username : " + username);
 		builder.append("|");
-		builder.append(" password : " + password);
-		builder.append("|");
 		builder.append(" connectTimeout : " + connectTimeout.toString());
 		builder.append("|");
 		builder.append(" socketTimeout : " + socketTimeout.toString());
 		builder.append("|");
 		return builder.toString();
+	}
+	public String getDisplayName() {
+		return displayName;
+	}
+	public void setDisplayName(String displayName) {
+		this.displayName = displayName;
 	}
 
 

@@ -297,5 +297,6 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap.put("Nodes|rabbit@ABEY-WIN7-32|Messages|Available", "76");
         expectedValueMap.put("Nodes|rabbit@ABEY-WIN7-32|Messages|Pending Acknowledgements", "87");
     }
+    
 
 }

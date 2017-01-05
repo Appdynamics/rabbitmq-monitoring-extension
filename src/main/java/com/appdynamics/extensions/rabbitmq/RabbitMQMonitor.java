@@ -148,6 +148,13 @@ public class RabbitMQMonitor extends AManagedMonitor {
 			InstanceInfo[] instancesToSet = new InstanceInfo[instances.size()];
 			for(Map<String,?> instance : instances){
 				InstanceInfo info = new InstanceInfo();
+				if(Strings.isNullOrEmpty((String) instance.get("displayName"))){
+					logger.error("Display name not mentioned for server ");
+					throw new RuntimeException("Display name not mentioned for server");
+				}
+				else{
+					info.setDisplayName((String) instance.get("displayName"));
+				}
 				if(!Strings.isNullOrEmpty((String) instance.get("host"))){
 					info.setHost((String) instance.get("host"));
 				}
