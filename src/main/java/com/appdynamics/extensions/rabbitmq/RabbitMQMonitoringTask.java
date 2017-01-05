@@ -85,6 +85,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		this();
 		this.configuration = conf;
 		this.info = info;
+		logger.debug(" Instance info initialized :" + info.toString());
 		this.dictionary = dictionary;
 		this.queueGroups = queueGroups;
 		this.metricPrefix = metricPrefix;

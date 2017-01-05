@@ -162,7 +162,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 				}
 
 				if(!Strings.isNullOrEmpty((String) instance.get("password"))){
-					info.setPassword((String) instance.get("username"));
+					info.setPassword((String) instance.get("password"));
 				}
 				else{
 					info.setPassword("guest");

@@ -1,7 +1,7 @@
 package com.appdynamics.extensions.rabbitmq.conf;
 
 public class InstanceInfo {
-	
+
 	private String host;
 	private Integer port;
 	private Boolean useSSL;
@@ -50,6 +50,26 @@ public class InstanceInfo {
 	}
 	public void setSocketTimeout(Integer socketTimeout) {
 		this.socketTimeout = socketTimeout;
+	}
+
+	@Override
+	public String toString(){
+		StringBuilder builder = new StringBuilder();
+		builder.append("host : " + host);
+		builder.append("|");
+		builder.append(" port : " + port);
+		builder.append("|");
+		builder.append(" useSSL : " + useSSL.toString());
+		builder.append("|");
+		builder.append(" username : " + username);
+		builder.append("|");
+		builder.append(" password : " + password);
+		builder.append("|");
+		builder.append(" connectTimeout : " + connectTimeout.toString());
+		builder.append("|");
+		builder.append(" socketTimeout : " + socketTimeout.toString());
+		builder.append("|");
+		return builder.toString();
 	}
 
 
