@@ -49,6 +49,7 @@ servers:
      ##passwordEncrypted : Encrypted Password to be used, In this case do not use normal password field as above
      connectTimeout: 10000
      socketTimeout: 10000
+     displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
      
    - host: "localhost"
      port: 15673
@@ -57,7 +58,8 @@ servers:
      password: "guest"
      connectTimeout: 10000
      socketTimeout: 10000  
-
+ 	 displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
+ 	 
 ##encryptionKey: "myKey", the encryption key used to encrypt passowrd(s), same will be used to decrypt`
 
 # number of concurrent tasks
