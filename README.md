@@ -46,8 +46,7 @@ servers:
      useSSL: false
      username: "guest"
      password: "guest"
-     ##passwordEncrypted : Encrypted Password to be used
-     ##encryptionKey : If encrypted password set, supply the key here
+     ##passwordEncrypted : Encrypted Password to be used, In this case do not use normal password field as above
      connectTimeout: 10000
      socketTimeout: 10000
      
@@ -58,6 +57,8 @@ servers:
      password: "guest"
      connectTimeout: 10000
      socketTimeout: 10000  
+
+##encryptionKey: "myKey", the encryption key used to encrypt passowrd(s), same will be used to decrypt`
 
 # number of concurrent tasks
 numberOfThreads: 5
@@ -127,4 +128,3 @@ Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/eXchange/Ra
 ##Support
 
 For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
-
