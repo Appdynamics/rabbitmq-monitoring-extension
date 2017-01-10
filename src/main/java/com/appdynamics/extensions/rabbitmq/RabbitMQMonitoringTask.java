@@ -162,7 +162,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		map.put(TaskInputArgs.PORT, info.getPort().toString());
 		map.put(TaskInputArgs.USER, info.getUsername());
 		map.put(TaskInputArgs.PASSWORD, info.getPassword());
-		map.put("useSSL", info.getUseSSL().toString());
+		map.put(TaskInputArgs.USE_SSL, info.getUseSSL().toString());
 		return map;
 
 	}
