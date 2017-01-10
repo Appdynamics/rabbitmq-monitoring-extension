@@ -20,7 +20,7 @@ queueGroups:
 #  queueNameRegex: temp.+
 #  showIndividualStats: false
 
-excludeQueueRegex: ^[0-9]
+excludeQueueRegex: ^[0-9]*
 
 encryptionKey: "myKey"
 

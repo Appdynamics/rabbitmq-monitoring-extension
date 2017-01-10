@@ -90,6 +90,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 		public void run() {
 			Map<String, ?> config = configuration.getConfigYml();
 			String excludeQueueRegex = instances.getExcludeQueueRegex();
+			System.out.println("The exc is "+excludeQueueRegex);
 			if(config!=null){
 				for(InstanceInfo info : instances.getInstances()){
 					configuration.getExecutorService().execute(new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix,excludeQueueRegex));
@@ -201,6 +202,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 				}
 				instancesToSet[index++] = info;
 			}
+			this.instances.setExcludeQueueRegex((String) configYml.get("excludeQueueRegex"));
 			this.instances.setInstances(instancesToSet);
 		}
 		else{

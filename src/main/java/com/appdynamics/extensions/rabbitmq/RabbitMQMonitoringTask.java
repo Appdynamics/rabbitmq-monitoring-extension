@@ -302,6 +302,9 @@ public class RabbitMQMonitoringTask implements Runnable{
 						logger.info("Skipping queue name "+qName+ " as it matches exclude queue name regex");
 						continue;
 					}
+					else{
+						logger.info("Not Skipping queue name "+qName+ " as it doesn't matches exclude queue name regex");
+					}
 				}
 				
 				GroupStat groupStat = tracker.getGroupStat(vHost, qName);
