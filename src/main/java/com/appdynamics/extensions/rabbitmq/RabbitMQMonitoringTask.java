@@ -26,6 +26,7 @@ import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
 
 public class RabbitMQMonitoringTask implements Runnable{
@@ -80,8 +81,10 @@ public class RabbitMQMonitoringTask implements Runnable{
 	private QueueGroup[] queueGroups;
 
 	private String metricPrefix;
+	
+	private String excludeQueueRegex;
 
-	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix){
+	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix,String excludeQueueRegex){
 		this();
 		this.configuration = conf;
 		this.info = info;
@@ -90,6 +93,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		this.queueGroups = queueGroups;
 		this.metricPrefix = metricPrefix;
 		this.metricPrefix = metricPrefix + info.getDisplayName() + "|";
+		this.excludeQueueRegex = excludeQueueRegex;
 	}
 	public RabbitMQMonitoringTask(){};
 
@@ -158,7 +162,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		map.put(TaskInputArgs.PORT, info.getPort().toString());
 		map.put(TaskInputArgs.USER, info.getUsername());
 		map.put(TaskInputArgs.PASSWORD, info.getPassword());
-		map.put("useSSL", info.getUseSSL().toString());
+		map.put(TaskInputArgs.USE_SSL, info.getUseSSL().toString());
 		return map;
 
 	}
@@ -293,6 +297,16 @@ public class RabbitMQMonitoringTask implements Runnable{
 				if (vHost.equals("/")) {
 					vHost = "Default";
 				}
+				if(!Strings.isNullOrEmpty(excludeQueueRegex)){
+					if(qName.matches(excludeQueueRegex)){
+						logger.info("Skipping queue name "+qName+ " as it matches exclude queue name regex");
+						continue;
+					}
+					else{
+						logger.info("Not Skipping queue name "+qName+ " as it doesn't matches exclude queue name regex");
+					}
+				}
+				
 				GroupStat groupStat = tracker.getGroupStat(vHost, qName);
 				boolean showIndividualStats = groupStat.isShowIndividualStats();
 				String prefix = "Queues|" + vHost + "|" + qName;
@@ -765,6 +779,14 @@ public class RabbitMQMonitoringTask implements Runnable{
 		StringBuilder sb = new StringBuilder();
 		sb.append(username).append(":").append(password);
 		return Base64Variants.MIME.encode(sb.toString().getBytes());
+	}
+
+	public String getExcludeQueueRegex() {
+		return excludeQueueRegex;
+	}
+
+	public void setExcludeQueueRegex(String excludeQueueRegex) {
+		this.excludeQueueRegex = excludeQueueRegex;
 	}	
 
 }

@@ -46,7 +46,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
 	public RabbitMQMonitor() {
 		String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
 		logger.info(msg);
-		System.out.println(msg);
 		dictionary = new HashMap<String, String>();
 		dictionary.put("ack", "Acknowledged");
 		dictionary.put("deliver", "Delivered");
@@ -89,9 +88,10 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
 		public void run() {
 			Map<String, ?> config = configuration.getConfigYml();
+			String excludeQueueRegex = instances.getExcludeQueueRegex();
 			if(config!=null){
 				for(InstanceInfo info : instances.getInstances()){
-					configuration.getExecutorService().execute(new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix));
+					configuration.getExecutorService().execute(new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix,excludeQueueRegex));
 				}
 			}
 			else{
@@ -200,6 +200,7 @@ public class RabbitMQMonitor extends AManagedMonitor {
 				}
 				instancesToSet[index++] = info;
 			}
+			this.instances.setExcludeQueueRegex((String) configYml.get("excludeQueueRegex"));
 			this.instances.setInstances(instancesToSet);
 		}
 		else{

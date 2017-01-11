@@ -39,6 +39,10 @@ queueGroups:
 #  queueNameRegex: temp.+
 #  showIndividualStats: false
 
+####Exclude Queues###
+excludeQueueRegex: ^[0-9]*
+###The above regex can be supplied to exclude metric reporting for queue names that match this regex###
+
 ####### RabbitMQ Server Instances. You can configure multiple instances as follows to report metrics from #######
 servers:
    - host: "localhost"
