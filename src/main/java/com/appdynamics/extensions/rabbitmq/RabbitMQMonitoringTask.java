@@ -146,12 +146,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 			printCollectiveObservedAverage("Availability", BigInteger.ZERO);
 
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
-		} finally {
-			try {
-				this.configuration.getHttpClient().close();
-			} catch (Exception e) {
-				logger.error("Error while closing the http client", e);
-			}
 		}
 
 	}
@@ -173,7 +167,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		try {
 			json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),ArrayNode.class);
 		}  catch (Exception e) {
-			e.printStackTrace();
+			logger.debug("Error while fetching the " + url + " data, returning " + json, e);
 		}
 		if (logger.isDebugEnabled()) {
 			logger.debug("The url " + url + " responded with a json {}" + json);
