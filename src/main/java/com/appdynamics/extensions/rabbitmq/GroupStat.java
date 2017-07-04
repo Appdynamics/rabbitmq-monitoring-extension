@@ -13,6 +13,8 @@ public class GroupStat {
     private boolean showIndividualStats;
 
     private Map<String, BigInteger> valueMap;
+    private Map<String, String> metricTypeMap;
+    private Map<String, Boolean> collectDeltaMap;
 
     protected GroupStat() {
         showIndividualStats = true;
@@ -23,6 +25,8 @@ public class GroupStat {
         this.groupName = groupName;
         this.showIndividualStats = showIndividualStats;
         valueMap = new HashMap<String, BigInteger>();
+        metricTypeMap = new HashMap<String, String>();
+        collectDeltaMap = new HashMap<String, Boolean>();
     }
 
     public String getvHost() {
@@ -48,7 +52,27 @@ public class GroupStat {
         }
     }
 
+    public void setMetricTypeMap(String metric, String metricType){
+        if(metricTypeMap!=null) {
+            metricTypeMap.put(metric, metricType);
+        }
+    }
+
+    public void setCollectDeltaMap(String metric, Boolean collectDelta){
+        if(collectDeltaMap!=null){
+            collectDeltaMap.put(metric,collectDelta);
+        }
+    }
+
     public Map<String, BigInteger> getValueMap() {
         return valueMap;
+    }
+
+    public Map<String, String> getMetricTypeMap() {
+        return metricTypeMap;
+    }
+
+    public Map<String, Boolean> getCollectDeltaMap() {
+        return collectDeltaMap;
     }
 }

@@ -2,6 +2,7 @@ package com.appdynamics.extensions.rabbitmq;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.net.URLConnection;
@@ -12,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.appdynamics.extensions.StringUtils;
+import com.appdynamics.extensions.util.DeltaMetricsCalculator;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -81,10 +84,20 @@ public class RabbitMQMonitoringTask implements Runnable{
 	private QueueGroup[] queueGroups;
 
 	private String metricPrefix;
-	
+
 	private String excludeQueueRegex;
 
-	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix,String excludeQueueRegex){
+	private Map<String, ?> configYml;
+
+	private List<Map<String, List<Map<String, String>>>> metricsFromConfig;
+
+	private Map<String, List<Map<String, String>>> allMetricsFromConfig;
+
+	private DeltaMetricsCalculator deltaCalculator;
+
+	private static final String DEFAULT_METRIC_TYPE = "OBS.CUR.COL";
+
+	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix,String excludeQueueRegex, DeltaMetricsCalculator deltaCalculator){
 		this();
 		this.configuration = conf;
 		this.info = info;
@@ -94,6 +107,11 @@ public class RabbitMQMonitoringTask implements Runnable{
 		this.metricPrefix = metricPrefix;
 		this.metricPrefix = metricPrefix + info.getDisplayName() + "|";
 		this.excludeQueueRegex = excludeQueueRegex;
+		this.configYml = conf.getConfigYml();
+		this.metricsFromConfig = (List<Map<String, List<Map<String, String>>>>) this.configYml.get("metrics");
+		this.deltaCalculator = deltaCalculator;
+		allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
+
 	}
 	public RabbitMQMonitoringTask(){};
 
@@ -130,6 +148,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 			String apiUrl = UrlBuilder.builder(getUrlParametersMap(info)).path("/api/queues").build();
 			ArrayNode queues = getJson(this.configuration.getHttpClient(), apiUrl);
+
+			populateMetricsMap();
 			process(nodes, channels, queues);
 
 			String federationLinkUrl = UrlBuilder.builder(getUrlParametersMap(info)).path("/api/federation-links").build();
@@ -141,9 +161,9 @@ public class RabbitMQMonitoringTask implements Runnable{
 			parseOverviewData(overview, nodes);
 
 			logger.info("Completed the RabbitMQ Metric Monitoring task");
-		} catch (Exception e) {  
+		} catch (Exception e) {
 			e.printStackTrace();
-			printCollectiveObservedAverage("Availability", BigInteger.ZERO);
+			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
 
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
 		}
@@ -205,17 +225,25 @@ public class RabbitMQMonitoringTask implements Runnable{
 				clusterNode = overview.get("node");
 			}
 			if (clusterNode != null) {
+
+				List<Map<String, String>> queueTotalsPropsList= allMetricsFromConfig.get("queueTotalsProps");
+
+				List<Map<String, String>> messageTotalsPropsList= allMetricsFromConfig.get("messageTotalsProps");
+
+				List<Map<String, String>> objectTotalsPropsList= allMetricsFromConfig.get("objectTotalsProps");
+
+
 				String clusterName = clusterNode.getTextValue();
 				String prefix = "Clusters|" + clusterName + "|";
 				//Queue Totals
-				report(overview.get("message_stats"), messageTotalsProps, prefix + "Messages|", true);
-				report(overview.get("queue_totals"), queueTotalsProps, prefix + "Queues|", true);
-				report(overview.get("object_totals"), objectTotalsProps, prefix + "Objects|", false);
+				report(overview.get("message_stats"), messageTotalsPropsList, prefix + "Messages|", true);
+				report(overview.get("queue_totals"), queueTotalsPropsList, prefix + "Queues|", true);
+				report(overview.get("object_totals"), objectTotalsPropsList, prefix + "Objects|", false);
 
 				//Total Nodes
 				String nodePrefix = prefix + "Nodes|";
 				if (nodes != null) {
-					printCollectiveObservedAverage(nodePrefix + "Total", new BigInteger(String.valueOf(nodes.size())));
+					printCollectiveObservedAverage(nodePrefix + "Total", new BigInteger(String.valueOf(nodes.size())), DEFAULT_METRIC_TYPE);
 					int runningCount = 0;
 					for (JsonNode node : nodes) {
 						Boolean running = getBooleanValue("running", node);
@@ -223,32 +251,33 @@ public class RabbitMQMonitoringTask implements Runnable{
 							runningCount++;
 						}
 					}
-					printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)));
+					printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)), DEFAULT_METRIC_TYPE);
 					if (runningCount < nodes.size()) {
-						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
+						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
 					} else {
-						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ONE);
+						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ONE, DEFAULT_METRIC_TYPE);
 					}
 				} else{
 					// If there are no nodes running
-					printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO);
+					printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
 				}
-				printCollectiveObservedAverage("Availability", BigInteger.ONE);
+				printCollectiveObservedAverage("Availability", BigInteger.ONE, DEFAULT_METRIC_TYPE);
 			}
 		} else {
-			printCollectiveObservedAverage("Availability", BigInteger.ZERO);
+			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
 		}
 	}
 
-	private void report(JsonNode node, List<String> fields, String metricPrefix, boolean useDictionary) {
+	private void report(JsonNode node, List<Map<String, String>> fields, String metricPrefix, boolean useDictionary) {
 		if (node != null && fields != null) {
-			for (String field : fields) {
-				JsonNode valueNode = node.get(field);
+			for (Map<String, String> field : fields) {
+				JsonNode valueNode = node.get(field.get("name"));
+				Boolean collectDelta = Boolean.valueOf(field.get("collectDelta"));
 				if (valueNode != null) {
 					if (useDictionary) {
-						printCollectiveObservedCurrent(metricPrefix + dictionary.get(field), valueNode.getBigIntegerValue());
+						printCollectiveObservedCurrent(metricPrefix + dictionary.get(field.get("name")), valueNode.getBigIntegerValue(), field.get("metricType"), collectDelta);
 					} else {
-						printCollectiveObservedCurrent(metricPrefix + field, valueNode.getBigIntegerValue());
+						printCollectiveObservedCurrent(metricPrefix + field.get("name"), valueNode.getBigIntegerValue(), field.get("metricType"), collectDelta);
 					}
 				}
 			}
@@ -264,11 +293,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 				final String exchangeName = getStringValue("exchange", federationLink);
 				final String upstreamName = getStringValue("upstream", federationLink);
 				final String status = getStringValue("status", federationLink);
-				printMetric(prefix + exchangeName + "|" + upstreamName + "|running", BigInteger.valueOf(status.equals("running") ? 1 : 0),
-						MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-						MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-						MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-						);
+				printCollectiveObservedCurrent(prefix + exchangeName + "|" + upstreamName + "|running", BigInteger.valueOf(status.equals("running") ? 1 : 0),DEFAULT_METRIC_TYPE, false);
 			}
 		}
 	}
@@ -281,6 +306,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 	private void parseQueueData(ArrayNode queues) {
 		if (queues != null) {
 			Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+			Map<String, String> metricTypeMap = new HashMap<String, String>();
+
 			GroupStatTracker tracker = new GroupStatTracker(queueGroups);
 			for (JsonNode queue : queues) {
 
@@ -300,56 +327,87 @@ public class RabbitMQMonitoringTask implements Runnable{
 						logger.info("Not Skipping queue name "+qName+ " as it doesn't matches exclude queue name regex");
 					}
 				}
-				
+
 				GroupStat groupStat = tracker.getGroupStat(vHost, qName);
 				boolean showIndividualStats = groupStat.isShowIndividualStats();
 				String prefix = "Queues|" + vHost + "|" + qName;
 				String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName();
-				BigInteger consumers = getBigIntegerValue("consumers", queue, 0);
-				if (showIndividualStats) {
-					printCollectiveObservedCurrent(prefix + "|Consumers", consumers);
+				List<Map<String, String>> queueGroupPropsList= allMetricsFromConfig.get("queueGroupProps");
+				BigInteger consumers = new BigInteger("0");
+				for(Map<String, String> prop : queueGroupPropsList){
+					consumers = getMetricValue(prop, queue);
+					if (showIndividualStats) {
+						printCollectiveObservedCurrent(prefix + prop.get("name"), consumers, prop.get("metricType"),
+										    	Boolean.valueOf(prop.get("collectDelta")));
+					}
+					groupStat.add(groupPrefix + prop.get("name"), consumers);
+					groupStat.setMetricTypeMap(groupPrefix + prop.get("name"), prop.get("metricType"));
+					groupStat.setCollectDeltaMap(groupPrefix + prop.get("name"), Boolean.valueOf(prop.get("collectDelta")));
 				}
-				groupStat.add(groupPrefix + "|Consumers", consumers);
+
 				String msgPrefix = prefix + "|Messages|";
 				String grpMsgPrefix = groupPrefix + "|Messages|";
-				for (String prop : queueMessageProps) {
-					BigInteger value = getBigIntegerValue(prop, queue, 0);
-					String metricName = getPropDesc(prop);
+
+				List<Map<String, String>> queueMessagePropsList= allMetricsFromConfig.get("queueMessageProps");
+
+				for (Map<String, String> prop : queueMessagePropsList) {
+					BigInteger value = getMetricValue(prop, queue);
+					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						printCollectiveObservedCurrent(msgPrefix + metricName, value);
+						printCollectiveObservedCurrent(msgPrefix + metricName, value, prop.get("metricType"),
+												Boolean.valueOf(prop.get("collectDelta")));
 					}
-					groupStat.add(grpMsgPrefix + metricName, value);
-					addToMap(valueMap, prop, value);
+
+					groupStat.add(groupPrefix + prop.get("name"), consumers);
+					groupStat.setMetricTypeMap(groupPrefix + prop.get("name"), prop.get("metricType"));
+					groupStat.setCollectDeltaMap(groupPrefix + prop.get("name"), Boolean.valueOf(prop.get("collectDelta")));
+					addToMap(valueMap, prop.get("name"), value);
+					metricTypeMap.put(prop.get("name"),prop.get("metricType"));
 				}
+
 				String replicationPrefix = prefix + "|Replication|";
-				for (String prop : queueReplicationCountsProps) {
-					BigInteger value = getChildrenCount(prop, queue, 0);
-					String metricName = getPropDesc(prop);
+
+				List<Map<String, String>> queueReplicationCountsPropsList= allMetricsFromConfig.get("queueReplicationCountsProps");
+				for (Map<String, String> prop : queueReplicationCountsPropsList) {
+					BigInteger value = getChildrenCount(prop.get("name"), queue, 0);
+					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						printCollectiveObservedCurrent(replicationPrefix + metricName, value);
+						printCollectiveObservedCurrent(replicationPrefix + metricName, value, prop.get("metricType"), Boolean.valueOf(prop.get("collectDelta")));
 					}
 				}
 
 				//Fetch data from message_stats object
 				JsonNode msgStats = queue.get("message_stats");
-				for (String prop : queueMessageStatsProps) {
-					BigInteger value = getBigIntegerValue(prop, msgStats, 0);
-					String metricName = getPropDesc(prop);
+
+				List<Map<String, String>> queueMessageStatsPropsList= allMetricsFromConfig.get("queueMessageStatsProps");
+
+
+				for (Map<String, String> prop : queueMessageStatsPropsList) {
+					BigInteger value = getMetricValue(prop, queue);
+					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						printCollectiveObservedCurrent(msgPrefix + metricName, value);
+						printCollectiveObservedCurrent(msgPrefix + metricName, value, prop.get("metricType"), Boolean.valueOf(prop.get("collectDelta")));
 					}
-					groupStat.add(grpMsgPrefix + metricName, value);
-					addToMap(valueMap, prop, value);
+					groupStat.add(grpMsgPrefix + prop.get("name"), consumers);
+					groupStat.setMetricTypeMap(grpMsgPrefix + prop.get("name"), prop.get("metricType"));
+					groupStat.setCollectDeltaMap(grpMsgPrefix + prop.get("name"), Boolean.valueOf(prop.get("collectDelta")));
+					addToMap(valueMap, prop.get("name"), value);
+					metricTypeMap.put(prop.get("name"),prop.get("metricType"));
 				}
 			}
 			//Aggregate the above data for Summary|Messages
 			String summaryPrefix = "Summary|Messages|";
-			for (String prop : queueSummaryProps) {
-				BigInteger value = valueMap.get(prop);
-				printCollectiveObservedCurrent(summaryPrefix + getPropDesc(prop), value);
+
+			List<Map<String, String>> queueSummaryPropsList= allMetricsFromConfig.get("queueSummaryProps");
+
+
+			for (Map<String, String> prop : queueSummaryPropsList) {
+				BigInteger value = valueMap.get(prop.get("name"));
+				String metricType = metricTypeMap.get(prop.get("name"));
+				printCollectiveObservedCurrent(summaryPrefix + getPropDesc(prop.get("name")), value, metricType, Boolean.valueOf(prop.get("collectDelta")));
 			}
 			//Total Number of Queues
-			printCollectiveObservedCurrent("Summary|Queues", new BigInteger(String.valueOf(queues.size())));
+			printCollectiveObservedCurrent("Summary|Queues", new BigInteger(String.valueOf(queues.size())), DEFAULT_METRIC_TYPE, false);
 
 			//Print the regex queue group metrics
 			Collection<GroupStat> groupStats = tracker.getGroupStats();
@@ -357,12 +415,12 @@ public class RabbitMQMonitoringTask implements Runnable{
 				for (GroupStat groupStat : groupStats) {
 					Map<String, BigInteger> groupValMap = groupStat.getValueMap();
 					for (String metric : groupValMap.keySet()) {
-						printCollectiveObservedCurrent(metric, groupValMap.get(metric));
+						printCollectiveObservedCurrent(metric, groupValMap.get(metric), groupStat.getMetricTypeMap().get(metric), groupStat.getCollectDeltaMap().get(metric));
 					}
 				}
 			}
 		} else {
-			printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"));
+			printCollectiveObservedCurrent("Summary|Queues", new BigInteger("0"), DEFAULT_METRIC_TYPE, false);
 		}
 	}
 
@@ -406,6 +464,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 	 * @param queues
 	 */
 	private void parseNodeData(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
+		List<Map<String, String>> nodeDataList= allMetricsFromConfig.get("nodeDataMetrics");
 		if (nodes != null) {
 			for (JsonNode node : nodes) {
 				String name = getStringValue("name", node);
@@ -413,25 +472,24 @@ public class RabbitMQMonitoringTask implements Runnable{
 					List<JsonNode> nodeChannels = getChannels(channels, name);
 					List<JsonNode> nodeQueues = getQueues(queues, name);
 					String prefix = "Nodes|" + name;
-					BigInteger procUsed = getBigIntegerValue("proc_used", node, 0);
-					printCollectiveObservedCurrent(prefix + "|Erlang Processes", procUsed);
-					printCollectiveObservedCurrent(prefix + "|Disk Free Alarm Activated", getNumericValueForBoolean("disk_free_alarm", node, -1));
-					printCollectiveObservedCurrent(prefix + "|Memory Free Alarm Activated", getNumericValueForBoolean("mem_alarm", node, -1));
-					BigInteger fdUsed = getBigIntegerValue("fd_used", node, 0);
-					printCollectiveObservedCurrent(prefix + "|File Descriptors", fdUsed);
-					BigInteger memUsed = getBigIntegerValue("mem_used", node, 0);
-					int round = (int) Math.round(memUsed.intValue() / (1024D * 1024D));
-					printCollectiveObservedCurrent(prefix + "|Memory(MB)", new BigInteger(String.valueOf(round)));
-					BigInteger sockUsed = getBigIntegerValue("sockets_used", node, 0);
-					printCollectiveObservedCurrent(prefix + "|Sockets", sockUsed);
-					printCollectiveObservedCurrent(prefix + "|Channels|Count", new BigInteger(String.valueOf(nodeChannels.size())));
-					printCollectiveObservedCurrent(prefix + "|Channels|Blocked", getBlockedChannelCount(nodeChannels));
+
+					for(Map<String, String> nodeData : nodeDataList){
+
+						BigInteger metricValue = getMetricValue(nodeData, node);
+
+						printCollectiveObservedCurrent(prefix + nodeData.get("prefix"),metricValue,
+								nodeData.get("metricType"), Boolean.valueOf(nodeData.get("collectDelta")));
+					}
+
+					printCollectiveObservedCurrent(prefix + "|Channels|Blocked",
+							getBlockedChannelCount(nodeChannels), DEFAULT_METRIC_TYPE, false);
+
 					//Nodes|$node|Messages
 					addChannelMessageProps(prefix + "|Messages", nodeChannels);
 					//Nodes|$node|Messages
-					addQueueMessageProps(prefix + "|Messages", nodeQueues);
+					addQueueProps(prefix + "|Messages", nodeQueues, "queueNodeMsgProps");
 					//Nodes|$node|Consumers
-					addQueueProps(prefix + "|Consumers", nodeQueues);
+					addQueueProps(prefix + "|Consumers", nodeQueues, "queueNodeProps");
 				}
 			}
 		}
@@ -462,7 +520,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 				count = count.add(value);
 			}
 		}
-		printCollectiveObservedCurrent("Summary|Consumers", new BigInteger(String.valueOf(count)));
+		printCollectiveObservedCurrent("Summary|Consumers",
+				new BigInteger(String.valueOf(count)), DEFAULT_METRIC_TYPE, false);
 	}
 
 	/**
@@ -477,37 +536,28 @@ public class RabbitMQMonitoringTask implements Runnable{
 		} else {
 			channelCount = 0;
 		}
-		printCollectiveObservedCurrent("Summary|Channels", new BigInteger(String.valueOf(channelCount)));
+		printCollectiveObservedCurrent("Summary|Channels",
+				new BigInteger(String.valueOf(channelCount)), DEFAULT_METRIC_TYPE, false);
 	}
 
-	private void addQueueProps(String metricPrefix, List<JsonNode> nodeQueues) {
+	private void addQueueProps(String metricPrefix, List<JsonNode> nodeQueues, String configName) {
 		Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+		Map<String, String> metricTypeMap = new HashMap<String, String>();
+		Map<String, Boolean> collectDeltaMap = new HashMap<String, Boolean>();
+
 		for (JsonNode queue : nodeQueues) {
-			for (String prop : queueNodeProps) {
-				BigInteger value = getBigIntegerValue(prop, queue);
-				addToMap(valueMap, prop, value);
+			List<Map<String, String>> queueNodePropsList= allMetricsFromConfig.get(configName);
+			for (Map<String, String> prop : queueNodePropsList) {
+				BigInteger value = getMetricValue(prop, queue);
+				addToMap(valueMap, prop.get("name"), value);
+				metricTypeMap.put(prop.get("name"), prop.get("metricType"));
+				collectDeltaMap.put(prop.get("name"), Boolean.valueOf(prop.get("collectDelta")));
 			}
 		}
-		uploadMetricValues(metricPrefix, valueMap);
+		uploadMetricValues(metricPrefix, valueMap, metricTypeMap, collectDeltaMap);
 		//TODO what to do with the count?
 	}
 
-	/**
-	 * Goes into Nodes|$node|Messages
-	 *
-	 * @param metricPrefix
-	 * @param nodeQueues
-	 */
-	private void addQueueMessageProps(String metricPrefix, List<JsonNode> nodeQueues) {
-		Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-		for (JsonNode queue : nodeQueues) {
-			for (String prop : queueNodeMsgProps) {
-				BigInteger value = getBigIntegerValue(prop, queue);
-				addToMap(valueMap, prop, value);
-			}
-		}
-		uploadMetricValues(metricPrefix, valueMap);
-	}
 
 	/**
 	 * Goes into Nodes|$node|Messages
@@ -515,31 +565,38 @@ public class RabbitMQMonitoringTask implements Runnable{
 	 * @param metricPrefix
 	 * @param nodeChannels
 	 */
-	private void addChannelMessageProps(String metricPrefix, List<JsonNode> nodeChannels) {
+	private void addChannelMessageProps(String metricPrefix, List<JsonNode> nodeChannels){
 		Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+		Map<String, String> metricTypeMap = new HashMap<String, String>();
+		Map<String, Boolean> collectDeltaMap = new HashMap<String, Boolean>();
+
 		for (JsonNode channel : nodeChannels) {
 			JsonNode msgStats = channel.get("message_stats");
-			for (String prop : channelNodeMsgProps) {
+			List<Map<String, String>> channelNodeMsgPropsList = allMetricsFromConfig.get("channelNodeMsgProps");
+
+			for (Map<String, String> prop : channelNodeMsgPropsList) {
 				if (msgStats != null) {
-					BigInteger statVal = getBigIntegerValue(prop, msgStats, 0);
-					addToMap(valueMap, prop, statVal);
+					BigInteger statVal = getMetricValue(prop, channel);
+					addToMap(valueMap, prop.get("name"), statVal);
+					metricTypeMap.put(prop.get("name"),prop.get("metricType"));
+					collectDeltaMap.put(prop.get("name"), Boolean.valueOf(prop.get("collectDelta")));
 				}
 			}
 		}
-		uploadMetricValues(metricPrefix, valueMap);
+		uploadMetricValues(metricPrefix, valueMap, metricTypeMap, collectDeltaMap);
 	}
-
 	/**
 	 * Iterates over the map and writes it to the metric writer.
 	 *
 	 * @param metricPrefix
 	 * @param valueMap
 	 */
-	private void uploadMetricValues(String metricPrefix, Map<String, BigInteger> valueMap) {
+	private void uploadMetricValues(String metricPrefix, Map<String, BigInteger> valueMap, Map<String, String> metricTypeMap, Map<String, Boolean> collectDeltaMap) {
 		for (String key : valueMap.keySet()) {
 			String name = getPropDesc(key);
 			BigInteger value = valueMap.get(key);
-			printCollectiveObservedCurrent(metricPrefix + "|" + name, value);
+			String metricType = metricTypeMap.get(key);
+			printCollectiveObservedCurrent(metricPrefix + "|" + name, value, metricType, collectDeltaMap.get(key));
 		}
 	}
 
@@ -668,7 +725,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 		}
 	}
 
-	public void printMetric(String metricName, BigInteger metricValue, String aggregation, String timeRollup, String cluster) {
+
+	public void printMetric(String metricName, BigInteger metricValue, String metricType) {
 
 		String value;
 		if (metricValue != null) {
@@ -676,27 +734,35 @@ public class RabbitMQMonitoringTask implements Runnable{
 		} else {
 			value = "0";
 		}
+		System.out.println("New Metrics print");
 		if (logger.isDebugEnabled()) {
-			logger.debug("Sending [" + aggregation + "/" + timeRollup + "/" + cluster
+			logger.debug("Sending ["
 					+ "] metric = " + metricPrefix + metricName + " = " + value);
 		}
-		this.configuration.getMetricWriter().printMetric(metricPrefix + metricName,value,aggregation,timeRollup,cluster);
+		this.configuration.getMetricWriter().printMetric(metricPrefix + metricName, new BigDecimal(metricValue),metricType);
 
 	}
 
-	private void printCollectiveObservedCurrent(String metricName, BigInteger metricValue) {
-		printMetric(metricName, metricValue,
-				MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-				MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
-				MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-				);
+	private void printCollectiveObservedCurrent(String metricName, BigInteger metricValue, String metricType, Boolean collectDelta) {
+
+		printMetric(metricName, metricValue, metricType);
+
+		if (collectDelta) {
+			BigDecimal deltaMetricValue = deltaCalculator.calculateDelta(metricName, BigDecimal.valueOf(metricValue.longValue()));
+
+			printMetric(metricName + " Delta",
+					deltaMetricValue != null ? deltaMetricValue.toBigInteger() : new BigInteger("0"), metricType);
+		}
 		if (metricValue != null) {
-			for (String suffix : perMinMetricSuffixes) {
-				if (metricName.endsWith(suffix)) {
+
+			List<Map<String, String>> perMinMetricSuffixesList= allMetricsFromConfig.get("perMinMetricSuffixes");
+
+			for (Map<String, String> suffix : perMinMetricSuffixesList) {
+				if (metricName.endsWith(suffix.get("name"))) {
 					BigInteger value = perMinMetricsMap.get(metricName);
 					if (value != null) {
 						BigInteger diff = metricValue.subtract(value);
-						printCollectiveObservedAverage(metricName + " Per Minute", diff);
+						printCollectiveObservedAverage(metricName + " Per Minute", diff,metricType);
 					}
 					perMinMetricsMap.put(metricName, metricValue);
 				}
@@ -704,20 +770,12 @@ public class RabbitMQMonitoringTask implements Runnable{
 		}
 	}
 
-	protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue) {
-		printMetric(metricName, metricValue,
-				MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-				MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-				MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE
-				);
+	protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue, String metricType) {
+		printMetric(metricName, metricValue,metricType);
 	}
 
-	protected void printIndividualObservedAverage(String metricName, BigInteger metricValue) {
-		printMetric(metricName, metricValue,
-				MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
-				MetricWriter.METRIC_TIME_ROLLUP_TYPE_AVERAGE,
-				MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_INDIVIDUAL
-				);
+	protected void printIndividualObservedAverage(String metricName, BigInteger metricValue, String metricType) {
+		printMetric(metricName, metricValue,metricType);
 	}
 
 	private String getStringValue(String propName, JsonNode node) {
@@ -781,6 +839,49 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 	public void setExcludeQueueRegex(String excludeQueueRegex) {
 		this.excludeQueueRegex = excludeQueueRegex;
-	}	
+	}
+
+	private void populateMetricsMap(){
+		for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
+			allMetricsFromConfig.putAll(metricsConfigEntry);
+		}
+	}
+
+	private BigInteger applyDivisor(BigDecimal metricValue, String divisor) {
+
+		if (Strings.isNullOrEmpty(divisor)) {
+			return metricValue.toBigInteger();
+		}
+
+		try {
+			metricValue = metricValue.divide(new BigDecimal(divisor));
+			return metricValue.toBigInteger();
+		} catch (NumberFormatException nfe) {
+			logger.error(String.format("Cannot apply divisor {} to value {}.", divisor, metricValue), nfe);
+		}
+		throw new IllegalArgumentException("Cannot convert into BigInteger " + metricValue);
+	}
+
+	/**
+	 * Calculates metric Value for given data
+	 * @param dataMap
+	 * @param node
+	 * @return
+	 */
+	private BigInteger getMetricValue(Map<String, String> dataMap, JsonNode node){
+
+		BigInteger metricValue;
+		if(Boolean.valueOf(dataMap.get("isBoolean"))){
+			metricValue = getNumericValueForBoolean(dataMap.get("name"), node, -1);
+		}else{
+			metricValue = getBigIntegerValue(dataMap.get("name"), node, 0);
+		}
+
+		if(StringUtils.hasText(dataMap.get("divisor"))){
+			BigInteger data = getBigIntegerValue(dataMap.get("name"), node, 0);
+			metricValue = applyDivisor(new BigDecimal(data), dataMap.get("divisor"));
+		}
+		return metricValue;
+	}
 
 }
