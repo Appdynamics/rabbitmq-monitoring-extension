@@ -10,6 +10,8 @@ public class InstanceInfo {
 	private Integer connectTimeout;
 	private Integer socketTimeout;
 	private String displayName;
+	private String encryptedPassword;
+	private String encryptionKey;
 	public String getHost() {
 		return host;
 	}
@@ -51,6 +53,18 @@ public class InstanceInfo {
 	}
 	public void setSocketTimeout(Integer socketTimeout) {
 		this.socketTimeout = socketTimeout;
+	}
+	public String getEncryptedPassword() {
+		return encryptedPassword;
+	}
+	public void setEncryptedPassword(String encryptedPassword) {
+		this.encryptedPassword = encryptedPassword;
+	}
+	public String getEncryptionKey() {
+		return encryptionKey;
+	}
+	public void setEncryptionKey(String encryptionKey) {
+		this.encryptionKey = encryptionKey;
 	}
 
 	@Override

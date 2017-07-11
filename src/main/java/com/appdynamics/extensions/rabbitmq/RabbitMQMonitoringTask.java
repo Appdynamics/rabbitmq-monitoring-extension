@@ -91,9 +91,33 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 	private List<Map<String, List<Map<String, String>>>> metricsFromConfig;
 
+	public List<Map<String, List<Map<String, String>>>> getMetricsFromConfig() {
+		return metricsFromConfig;
+	}
+
+	public void setMetricsFromConfig(List<Map<String, List<Map<String, String>>>> metricsFromConfig) {
+		this.metricsFromConfig = metricsFromConfig;
+	}
+
 	private Map<String, List<Map<String, String>>> allMetricsFromConfig;
 
+	public Map<String, List<Map<String, String>>> getAllMetricsFromConfig() {
+		return allMetricsFromConfig;
+	}
+
+	public void setAllMetricsFromConfig(Map<String, List<Map<String, String>>> allMetricsFromConfig) {
+		this.allMetricsFromConfig = allMetricsFromConfig;
+	}
+
 	private DeltaMetricsCalculator deltaCalculator;
+
+	public DeltaMetricsCalculator getDeltaCalculator() {
+		return deltaCalculator;
+	}
+
+	public void setDeltaCalculator(DeltaMetricsCalculator deltaCalculator) {
+		this.deltaCalculator = deltaCalculator;
+	}
 
 	private static final String DEFAULT_METRIC_TYPE = "OBS.CUR.COL";
 
@@ -115,26 +139,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 	}
 	public RabbitMQMonitoringTask(){};
 
-	//Items in Nodes|<node>|Messages - data looked up from /api/channels
-	private List<String> channelNodeMsgProps = Arrays.asList("ack", "deliver", "deliver_no_ack", "get_no_ack", "publish", "redeliver");
-	//Items in Nodes|<node>|Messages - data looked up from /api/queues
-	private List<String> queueNodeMsgProps = Arrays.asList("messages_ready", "messages_unacknowledged");
-	//Items in Nodes|<node>|Consumers - data looked up from /api/queues
-	private List<String> queueNodeProps = Arrays.asList("consumers");
-	//Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues
-	private List<String> queueMessageProps = Arrays.asList("messages_ready", "messages_unacknowledged");
-	private List<String> queueReplicationCountsProps = Arrays.asList("slave_nodes", "synchronised_slave_nodes", "down_slave_nodes");
-	//Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats
-	private List<String> queueMessageStatsProps = Arrays.asList("ack", "deliver_get", "deliver", "deliver_no_ack", "get", "get_no_ack", "publish", "redeliver");
-	//Items in Summary|Messages - data looked up from /api/queues
-	private List<String> queueSummaryProps = Arrays.asList("messages_ready", "deliver_get", "publish", "redeliver", "messages_unacknowledged");
-	//Overview Queue Totals
-	private List<String> queueTotalsProps = Arrays.asList("messages", "messages_ready", "messages_unacknowledged");
-	private List<String> messageTotalsProps = Arrays.asList("publish", "ack", "deliver_get", "deliver");
-	private List<String> objectTotalsProps = Arrays.asList("consumers", "queues", "exchanges", "connections", "channels");
-
-	//Per Minute Metrics, All these metric suffixes will be reported as per minute also
-	private List<String> perMinMetricSuffixes = Arrays.asList("|Messages|Delivered (Total)", "|Messages|Published", "|Messages|Acknowledged", "|Messages|Redelivered");
 	private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
 
 	public void run() {
@@ -163,7 +167,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 			logger.info("Completed the RabbitMQ Metric Monitoring task");
 		} catch (Exception e) {
 			e.printStackTrace();
-			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
+			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE, false);
 
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
 		}
@@ -243,7 +247,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 				//Total Nodes
 				String nodePrefix = prefix + "Nodes|";
 				if (nodes != null) {
-					printCollectiveObservedAverage(nodePrefix + "Total", new BigInteger(String.valueOf(nodes.size())), DEFAULT_METRIC_TYPE);
+					printCollectiveObservedAverage(nodePrefix + "Total",
+										new BigInteger(String.valueOf(nodes.size())), DEFAULT_METRIC_TYPE, false);
 					int runningCount = 0;
 					for (JsonNode node : nodes) {
 						Boolean running = getBooleanValue("running", node);
@@ -251,20 +256,26 @@ public class RabbitMQMonitoringTask implements Runnable{
 							runningCount++;
 						}
 					}
-					printCollectiveObservedAverage(nodePrefix + "Running", new BigInteger(String.valueOf(runningCount)), DEFAULT_METRIC_TYPE);
+					printCollectiveObservedAverage(nodePrefix + "Running",
+										new BigInteger(String.valueOf(runningCount)), DEFAULT_METRIC_TYPE, false);
 					if (runningCount < nodes.size()) {
-						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
+						printIndividualObservedAverage(prefix + "Cluster Health",
+												BigInteger.ZERO, DEFAULT_METRIC_TYPE, false);
 					} else {
-						printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ONE, DEFAULT_METRIC_TYPE);
+						printIndividualObservedAverage(prefix + "Cluster Health",
+												BigInteger.ONE, DEFAULT_METRIC_TYPE, false);
 					}
 				} else{
 					// If there are no nodes running
-					printIndividualObservedAverage(prefix + "Cluster Health", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
+					printIndividualObservedAverage(prefix + "Cluster Health",
+										BigInteger.ZERO, DEFAULT_METRIC_TYPE, false);
 				}
-				printCollectiveObservedAverage("Availability", BigInteger.ONE, DEFAULT_METRIC_TYPE);
+				printCollectiveObservedAverage("Availability", BigInteger.ONE,
+												DEFAULT_METRIC_TYPE, false);
 			}
 		} else {
-			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE);
+			printCollectiveObservedAverage("Availability", BigInteger.ZERO,
+												DEFAULT_METRIC_TYPE, false);
 		}
 	}
 
@@ -536,7 +547,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		} else {
 			channelCount = 0;
 		}
-		printCollectiveObservedCurrent("Summary|Channels",
+		printCollectiveObservedCurrent("|Summary|Channels",
 				new BigInteger(String.valueOf(channelCount)), DEFAULT_METRIC_TYPE, false);
 	}
 
@@ -762,7 +773,8 @@ public class RabbitMQMonitoringTask implements Runnable{
 					BigInteger value = perMinMetricsMap.get(metricName);
 					if (value != null) {
 						BigInteger diff = metricValue.subtract(value);
-						printCollectiveObservedAverage(metricName + " Per Minute", diff,metricType);
+						printCollectiveObservedAverage(metricName + " Per Minute", diff,
+											suffix.get("metricType"),Boolean.valueOf(suffix.get("collectDelta")));
 					}
 					perMinMetricsMap.put(metricName, metricValue);
 				}
@@ -770,12 +782,27 @@ public class RabbitMQMonitoringTask implements Runnable{
 		}
 	}
 
-	protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue, String metricType) {
+	protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue, String metricType, Boolean collectDelta) {
+
 		printMetric(metricName, metricValue,metricType);
+
+		if (collectDelta) {
+			BigDecimal deltaMetricValue = deltaCalculator.calculateDelta(metricName, BigDecimal.valueOf(metricValue.longValue()));
+
+			printMetric(metricName + " Delta",
+					deltaMetricValue != null ? deltaMetricValue.toBigInteger() : new BigInteger("0"), metricType);
+		}
 	}
 
-	protected void printIndividualObservedAverage(String metricName, BigInteger metricValue, String metricType) {
+	protected void printIndividualObservedAverage(String metricName, BigInteger metricValue, String metricType, Boolean collectDelta) {
 		printMetric(metricName, metricValue,metricType);
+
+		if (collectDelta) {
+			BigDecimal deltaMetricValue = deltaCalculator.calculateDelta(metricName, BigDecimal.valueOf(metricValue.longValue()));
+
+			printMetric(metricName + " Delta",
+					deltaMetricValue != null ? deltaMetricValue.toBigInteger() : new BigInteger("0"), metricType);
+		}
 	}
 
 	private String getStringValue(String propName, JsonNode node) {

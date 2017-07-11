@@ -1,35 +1,37 @@
 [
     {
         "connection_details": {
-            "name": "192.168.57.1:55327 -> 192.168.57.201:5672",
-            "peer_port": 55327,
+            "name": "192.168.57.1:55327 -> 192.168.57.201:5672 ",
+            "peer_port": "55327",
             "peer_host": "192.168.57.1"
         },
         "message_stats": {
-            "ack": 23,
+            "ack": 5,
             "ack_details": {
                 "rate": 0.0
             },
-            "deliver": 33,
+            "deliver": 8,
             "deliver_details": {
                 "rate": 0.0
             },
-            "deliver_get": 43,
+            "deliver_get": 12,
             "deliver_get_details": {
                 "rate": 0.0
             }
         },
-        "idle_since": "2013-12-14 20:09:04",
+        "idle_since": "2017-07-07 19:35:17",
         "transactional": false,
         "confirm": false,
         "consumer_count": 1,
-        "messages_unacknowledged": 53,
-        "messages_unconfirmed": 63,
-        "messages_uncommitted": 73,
-        "acks_uncommitted": 83,
+        "messages_unacknowledged": 0,
+        "messages_unconfirmed": 0,
+        "messages_uncommitted": 7,
+        "acks_uncommitted": 3,
         "prefetch_count": 1,
+        "global_prefetch_count": 0,
+        "state": "running",
         "client_flow_blocked": false,
-        "node": "rabbit@ABEY-WIN7-32",
+        "node": "rabbit@rabbit2",
         "name": "192.168.57.1:55327 -> 192.168.57.201:5672 (1)",
         "number": 1,
         "user": "guest",
@@ -55,19 +57,20 @@
                 "rate": 0.0
             }
         },
-        "idle_since": "2013-12-14 20:09:03",
+        "idle_since": "2017-07-07 19:35:17",
         "transactional": false,
         "confirm": false,
-        "consumer_count": 1,
-        "messages_unacknowledged": 54,
-        "messages_unconfirmed": 64,
-        "messages_uncommitted": 74,
-        "acks_uncommitted": 84,
+        "consumer_count": 2,
+        "messages_unacknowledged": 34,
+        "messages_unconfirmed": 40,
+        "messages_uncommitted": 65,
+        "acks_uncommitted": 72,
         "prefetch_count": 1,
+        "global_prefetch_count": 0,
         "client_flow_blocked": false,
-        "node": "rabbit@ABEY-WIN7-32",
+        "node": "rabbit@rabbit1",
         "name": "192.168.57.1:55327 -> 192.168.57.201:5672 (2)",
-        "number": 2,
+        "number": 1,
         "user": "guest",
         "vhost": "/"
     }

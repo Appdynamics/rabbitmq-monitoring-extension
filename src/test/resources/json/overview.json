@@ -30,33 +30,33 @@
     }
   ],
   "rabbitmq_version": "3.4.0",
-  "cluster_name": "rabbit@rabbit1",
+  "cluster_name": "rabbitmqCluster",
   "erlang_version": "R16B03-1",
   "erlang_full_version": "Erlang R16B03-1 (erts-5.10.4) [source] [64-bit] [async-threads:30] [hipe] [kernel-poll:true]",
   "message_stats": {
-    "publish": 41,
+    "publish": 31,
     "publish_details": {"rate": 0.0},
-    "ack": 42,
+    "ack": 29,
     "ack_details": {"rate": 0.0},
-    "deliver_get": 43,
+    "deliver_get": 32,
     "deliver_get_details": {"rate": 0.0},
-    "deliver": 44,
+    "deliver": 35,
     "deliver_details": {"rate": 0.0}
   },
   "queue_totals": {
-    "messages": 1,
+    "messages": 13,
     "messages_details": {"rate": 0.0},
-    "messages_ready": 2,
+    "messages_ready": 13,
     "messages_ready_details": {"rate": 0.0},
-    "messages_unacknowledged": 3,
+    "messages_unacknowledged": 7,
     "messages_unacknowledged_details": {"rate": 0.0}
   },
   "object_totals": {
-    "consumers": 5,
-    "queues": 2,
-    "exchanges": 8,
-    "connections": 6,
-    "channels": 7
+    "consumers": 1,
+    "queues": 3,
+    "exchanges": 2,
+    "connections": 3,
+    "channels": 1
   },
   "node": "rabbit@rabbit1",
   "statistics_db_node": "rabbit@rabbit1",

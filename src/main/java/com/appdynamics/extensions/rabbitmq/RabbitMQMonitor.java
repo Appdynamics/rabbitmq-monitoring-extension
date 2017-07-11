@@ -10,7 +10,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.appdynamics.TaskInputArgs;
+import com.appdynamics.extensions.crypto.CryptoUtil;
 import com.appdynamics.extensions.util.DeltaMetricsCalculator;
+import com.google.common.collect.Maps;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -162,6 +165,19 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
 				if(!Strings.isNullOrEmpty((String) instance.get("password"))){
 					info.setPassword((String) instance.get("password"));
+				}
+				else if(!Strings.isNullOrEmpty((String) instance.get("encryptedPassword"))){
+					try {
+						Map<String, String> args = Maps.newHashMap();
+						args.put(TaskInputArgs.PASSWORD_ENCRYPTED, (String)instance.get("encryptedPassword"));
+						args.put(TaskInputArgs.ENCRYPTION_KEY, (String)instance.get("encryptionKey"));
+						info.setPassword(CryptoUtil.getPassword(args));
+
+					} catch (IllegalArgumentException e) {
+						String msg = "Encryption Key not specified. Please set the value in config.yml.";
+						logger.error(msg);
+						throw new IllegalArgumentException(msg);
+					}
 				}
 				else{
 					info.setPassword("guest");
