@@ -64,9 +64,6 @@ public class RabbitMQMonitor extends AManagedMonitor {
 	private void configure(Map<String, String> argsMap) {
 		logger.info("Initializing the RabbitMQ Configuration");
 		MetricWriteHelper metricWriteHelper = MetricWriteHelperFactory.create(this);
-		if(!Strings.isNullOrEmpty(argsMap.get("metricPrefix"))){
-			metricPrefix = argsMap.get("metricPrefix");
-		}
 		MonitorConfiguration conf = new MonitorConfiguration(metricPrefix, new TaskRunnable(), metricWriteHelper);
 		String configFileName = argsMap.get("config-file");
 		if(Strings.isNullOrEmpty(configFileName)){
@@ -76,6 +73,10 @@ public class RabbitMQMonitor extends AManagedMonitor {
 		conf.checkIfInitialized(MonitorConfiguration.ConfItem.CONFIG_YML, MonitorConfiguration.ConfItem.EXECUTOR_SERVICE,
 				MonitorConfiguration.ConfItem.METRIC_PREFIX, MonitorConfiguration.ConfItem.METRIC_WRITE_HELPER);
 		this.configuration = conf;
+		String prefix = (String)this.configuration.getConfigYml().get("metricPrefix");
+		if(!Strings.isNullOrEmpty(prefix)){
+			metricPrefix = prefix;
+		}
 		initialized = true;
 	}
 
@@ -100,40 +101,11 @@ public class RabbitMQMonitor extends AManagedMonitor {
 		}
 		initialiseInstances(this.configuration.getConfigYml());
 		logger.info("Starting the RabbitMQ Metric Monitoring task");
-		argsMap = checkArgs(argsMap);
 		if (logger.isDebugEnabled()) {
 			logger.debug("The arguments after appending the default values are " + argsMap);
 		}
 		configuration.executeTask();
 		return new TaskOutput("RabbitMQ Metric Upload Complete ");
-	}
-
-	/**
-	 * Defaults the value if not present.
-	 *
-	 * @param argsMapsActual
-	 * @return
-	 */
-	protected Map<String, String> checkArgs(Map<String, String> argsMapsActual) {
-		Map<String, String> newArgsMap;
-		if (argsMapsActual != null) {
-			newArgsMap = new HashMap<String, String>(argsMapsActual);
-		} else {
-			newArgsMap = new HashMap<String, String>();
-		}
-		String prefix = newArgsMap.get("metricPrefix");
-		if (prefix == null) {
-			newArgsMap.put("metricPrefix", RabbitMQMonitor.DEFAULT_METRIC_PREFIX);
-		} else {
-			String trim = prefix.trim();
-			Pattern compile = Pattern.compile("(.+?)(\\|+)");
-			Matcher matcher = compile.matcher(trim);
-			if (matcher.matches()) {
-				trim = matcher.group(1);
-			}
-			newArgsMap.put("metricPrefix", trim + "|");
-		}
-		return newArgsMap;
 	}
 
 	private void initialiseInstances(Map<String, ?> configYml) {

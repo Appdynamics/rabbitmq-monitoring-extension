@@ -19,7 +19,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.Base64Variants;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -30,7 +29,6 @@ import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import com.google.common.base.Strings;
-import com.singularity.ee.agent.systemagent.api.MetricWriter;
 
 public class RabbitMQMonitoringTask implements Runnable{
 	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitorTask");
@@ -166,7 +164,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 			logger.info("Completed the RabbitMQ Metric Monitoring task");
 		} catch (Exception e) {
-			e.printStackTrace();
 			printCollectiveObservedAverage("Availability", BigInteger.ZERO, DEFAULT_METRIC_TYPE, false);
 
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
@@ -191,7 +188,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 		try {
 			json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),ArrayNode.class);
 		}  catch (Exception e) {
-			logger.debug("Error while fetching the " + url + " data, returning " + json, e);
+			logger.error("Error while fetching the " + url + " data, returning " + json, e);
 		}
 		if (logger.isDebugEnabled()) {
 			logger.debug("The url " + url + " responded with a json {}" + json);
@@ -210,7 +207,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 			}
 			return json;
 		} catch (Exception ex) {
-			logger.debug("Error while fetching the '/api/federation-links' data, returning NULL", ex);
+			logger.error("Error while fetching the '/api/federation-links' data, returning NULL", ex);
 			return null;
 		}
 	}
@@ -386,9 +383,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 						printCollectiveObservedCurrent(replicationPrefix + metricName, value, prop.get("metricType"), Boolean.valueOf(prop.get("collectDelta")));
 					}
 				}
-
-				//Fetch data from message_stats object
-				JsonNode msgStats = queue.get("message_stats");
 
 				List<Map<String, String>> queueMessageStatsPropsList= allMetricsFromConfig.get("queueMessageStatsProps");
 
@@ -685,58 +679,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 		return nodeQueues;
 	}
 
-
-	private String buildBaseUrl(Map<String, String> argsMap) {
-		StringBuilder sb = new StringBuilder();
-		String useSSL = argsMap.get("useSSL");
-		if (useSSL.equalsIgnoreCase("true")) {
-			sb.append("https://");
-		} else {
-			sb.append("http://");
-		}
-		sb.append(argsMap.get("host")).append(":");
-		sb.append(argsMap.get("port")).append("/");
-		sb.append("api");
-		if (logger.isDebugEnabled()) {
-			logger.debug("Base URL initialized to " + sb.toString());
-		}
-		return sb.toString();
-	}
-
-
-	/**
-	 * @param urlStr
-	 * @param encodedUserPass
-	 * @return
-	 */
-	public ArrayNode invokeApi(String urlStr, String encodedUserPass) {
-		InputStream in = null;
-		ObjectMapper mapper = new ObjectMapper();
-		try {
-			URL url = new URL(urlStr);
-			URLConnection connection = url.openConnection();
-			connection.setRequestProperty("Authorization", "Basic " + encodedUserPass);
-			connection.setRequestProperty("Accept", "application/json");
-			in = connection.getInputStream();
-			ArrayNode nodes = mapper.readValue(in, ArrayNode.class);
-			if (logger.isDebugEnabled()) {
-				logger.debug("The api " + urlStr + " returned the json " + nodes);
-			}
-			return nodes;
-		} catch (IOException e) {
-			logger.error("Exception while invoking the api at " + urlStr, e);
-			return null;
-		} finally {
-			if (in != null) {
-				try {
-					in.close();
-				} catch (IOException e) {
-				}
-			}
-		}
-	}
-
-
 	public void printMetric(String metricName, BigInteger metricValue, String metricType) {
 
 		String value;
@@ -745,7 +687,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 		} else {
 			value = "0";
 		}
-		System.out.println("New Metrics print");
 		if (logger.isDebugEnabled()) {
 			logger.debug("Sending ["
 					+ "] metric = " + metricPrefix + metricName + " = " + value);
@@ -844,28 +785,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 	private BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
 		BigInteger value = getBigIntegerValue(propName, node);
 		return value != null ? value : new BigInteger(String.valueOf(defaultVal));
-	}
-
-	/**
-	 * Encodes the Username and Password using Base64 encoding.
-	 *
-	 * @param argsMap Expected to contain the use and password
-	 * @return
-	 */
-	private String encodeUserPass(Map<String, String> argsMap) {
-		String username = argsMap.get("username");
-		String password = argsMap.get("password");
-		StringBuilder sb = new StringBuilder();
-		sb.append(username).append(":").append(password);
-		return Base64Variants.MIME.encode(sb.toString().getBytes());
-	}
-
-	public String getExcludeQueueRegex() {
-		return excludeQueueRegex;
-	}
-
-	public void setExcludeQueueRegex(String excludeQueueRegex) {
-		this.excludeQueueRegex = excludeQueueRegex;
 	}
 
 	private void populateMetricsMap(){

@@ -5,21 +5,12 @@
     <monitor-configuration></monitor-configuration>
     <monitor-run-task>
         <execution-style>periodic</execution-style>
-        <execution-frequency-in-seconds>55</execution-frequency-in-seconds>
+        <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
         <name>RabbitMQ Monitor Run task</name>
         <display-name>RabbitMQ Monitor Run task</display-name>
         <description>RabbitMQ Monitor Run task</description>
         <type>java</type>
         <execution-timeout-in-secs>60</execution-timeout-in-secs>
-<!--         <task-arguments>
-            <argument name="host" is-required="true" default-value="localhost"/>
-            <argument name="port" is-required="true" default-value="15672"/>
-            <argument name="useSSL" is-required="true" default-value="false"/>
-            <argument name="username" is-required="true" default-value="guest"/>
-            <argument name="password" is-required="true" default-value="guest"/>
-            <argument name="connectTimeout" is-required="false" default-value="10000"/>
-            <argument name="socketTimeout" is-required="false" default-value="10000" />
-        </task-arguments> -->
         <java-task>
             <classpath>rabbitmq-monitoring-extension.jar</classpath>
             <impl-class>com.appdynamics.extensions.rabbitmq.RabbitMQMonitor</impl-class>
