@@ -178,9 +178,25 @@ public class RabbitMQMonitoringTask implements Runnable{
 		map.put(TaskInputArgs.USER, info.getUsername());
 		map.put(TaskInputArgs.PASSWORD, info.getPassword());
 		map.put(TaskInputArgs.USE_SSL, info.getUseSSL().toString());
+		checkForEnvironmentsOverride(map,info.getDisplayName());
 		return map;
 
 	}
+
+	private void checkForEnvironmentsOverride(Map<String, String> map, String displayName) {
+		String[] keys = new String[]{
+				TaskInputArgs.HOST,
+				TaskInputArgs.PORT,
+				TaskInputArgs.USER,
+				TaskInputArgs.PASSWORD,
+				TaskInputArgs.USE_SSL
+		};
+		for (String key:keys) {
+			map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase(), map.get(key)));
+			map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase() + "_" + displayName, map.get(key)));
+		}
+	}
+
 	protected ArrayNode getJson(CloseableHttpClient client, String url) {
 		HttpGet get = new HttpGet(url);
 		ObjectMapper mapper = new ObjectMapper();
