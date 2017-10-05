@@ -11,9 +11,26 @@ The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbi
 
 ##Installation
 
-1. Run "mvn clean install"
-2. Download and unzip the file 'target/RabbitMQMonitor.zip' to \<machineagent install dir\>/monitors
-3. Configure the config.yml. A sample config is as follows :
+The RabbitMQ Management Plugin must be enabled. Please refer to RabbitMQ Management API for more details.
+
+1. Download and unzip the RabbitMQMonitor.zip to the "<MachineAgent_Dir>/monitors" directory
+2. Edit the file config.yml as described below in Configuration Section, located in    <MachineAgent_Dir>/monitors/RabbitMQMonitor and update the RabbitMQ server(s) details.
+3. Restart the Machine Agent
+
+##Configuration
+
+1. Queue Group Configuration
+
+   The queue can be grouped and the metrics for the group of queues can be collected with this feature. The grouping can be   used for a scenario where there was a large number of Queues(20+) and they were very short lived (hours to couple of days). Another use case if for example, there are 10 queues working on 'order placement' and 5 queues working on 'user notification', then you can create a group for 'order placement' and get the collective stats.
+
+   This will create a new tree node named "Queue Groups" as a sibling of "Queues". There is a file named "monitors/RabbitMQMonitor/config.yml" where you add the queue configuration. 
+You can also exclude one or more queue(s) by supplying a regex to match such queue names. Please take a look at config.yml for detailed information.
+
+2. Instances Configuration
+
+   The extension supports reporting metrics from multiple rabbitMQ instances. Have a look at config.yml for more details.
+
+   Configure the extension by editing the config.yaml file in `<MACHINE_AGENT_HOME>/monitors/RabbitMQMonitor/`. Below is the format
 
 
 ``` yaml
@@ -68,47 +85,254 @@ servers:
 
 # number of concurrent tasks
 numberOfThreads: 5
+
+dictionary:
+  ack: "Acknowledged"
+  deliver: "Delivered"
+  deliver_get: "Delivered (Total)"
+  deliver_no_ack: "Delivered No-Ack"
+  get: "Got"
+  get_no_ack: "Got No-Ack"
+  publish: "Published"
+  redeliver: "Redelivered"
+  messages_ready: "Available"
+  messages_unacknowledged: "Pending Acknowledgements"
+  consumers: "Count"
+  active_consumers: "Active"
+  idle_consumers: "Idle"
+  slave_nodes: "Slaves Count"
+  synchronised_slave_nodes: "Synchronized Slaves Count"
+  down_slave_nodes: "Down Slaves Count"
+  messages: "Messages"
+
+metrics:
+     #Items in Nodes||Messages - data looked up from /api/channels
+   - channelNodeMsgProps:
+         - name: "ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver_no_ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "get_no_ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "publish"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "redeliver"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Queue Group data, stats combined by groupName defined in queueGroups above
+   - queueGroupProps:
+         - name: "consumers"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Nodes||Messages - data looked up from /api/queues
+   - queueNodeMsgProps:
+         - name: "messages_ready"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "messages_unacknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Nodes||Consumers - data looked up from /api/queues
+   - queueNodeProps:
+         - name: "consumers"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Queues|||Messages - data looked up from /api/queues
+   - queueMessageProps:
+         - name: "messages_ready"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "messages_unacknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Queues|||Replication - data looked up from /api/queues
+   - queueReplicationCountsProps:
+         - name: "slave_nodes"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "synchronised_slave_nodes"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "down_slave_nodes"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Queues|||Messages - data looked up from /api/queues/message_stats
+   - queueMessageStatsProps:
+         - name: "ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver_get"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver_no_ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "get"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "get_no_ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "publish"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "redeliver"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Summary|Messages - data looked up from /api/queues
+   - queueSummaryProps:
+         - name: "messages_ready"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver_get"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "publish"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "redeliver"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "messages_unacknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Clusters||Queues - data looked up from /api/overview
+   - queueTotalsProps:
+         - name: "messages"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "messages_ready"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "messages_unacknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Clusters||Messages - data looked up from /api/overview
+   - messageTotalsProps:
+         - name: "publish"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "deliver_get"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "confirm"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "get"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+     #Items in Clusters||Objects - data looked up from /api/overview
+   - objectTotalsProps:
+         - name: "consumers"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "queues"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "exchanges"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "connections"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "channels"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+   #Items in Nodes| - data looked up from /api/nodes
+   - nodeDataMetrics:
+         - name: "proc_used"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Erlang Processes"
+         - name: "disk_free_alarm"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           isBoolean: "true"
+           prefix: "|Disk Free Alarm Activated"
+         - name: "mem_alarm"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           isBoolean: "true"
+           prefix: "|Memory Free Alarm Activated"
+         - name: "fd_used"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|File Descriptors"
+         - name: "mem_used"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           divisor: "1048576"
+           prefix: "|Memory(MB)"
+         - name: "sockets_used"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Sockets"
+         - name: "channels_count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Channels|Count"
+         - name: "channels_blocked"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Channels|Blocked"
+         - name: "summary_channels"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Summary|Channels"
+         - name: "consumers"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+           prefix: "|Summary|Consumers"
+     #Per Minute Metrics, All these metric suffixes will be reported as per minute also
+   - perMinMetricSuffixes:
+         - name: "|Messages|Delivered (Total)"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "|Messages|Published"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "|Messages|Acknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+         - name: "|Messages|Redelivered"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "false"
+
+#This will create this metric in all the tiers, under this path
+metricPrefix: Custom Metrics | RabbitMQ |
+
+#This will create it in specific Tier/Component. Make sure to replace  with the appropriate one from your environment.
+#To find the  in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
+#metricPrefix: Server|Component:|Custom Metrics|RabbitMQ|
 ```
+##Workbench
 
-##Metrics
-The following metrics are reported. The Metric Path is relative to the "metricPrefix" defined in the monitor.xml
+Workbench is a feature by which you can preview the metrics before registering it with the controller. This is useful if you want to fine tune the configurations. Workbench is embedded into the extension jar.
+To use the workbench
+Follow all the installation steps
+Start the workbench with the command
+      java -jar /monitors/RabbitMQMonitor/rabbitmq-monitoring-extension.jar
+   
 
-| Metric Path  | Description  |
-|---------------- |------------- |
-| Nodes/{node}/Erlang Processes | The count of Erlang Processes running in the node |
-| Nodes/{node}/File Descriptors | The count of open file descriptors in the node |
-| Nodes/{node}/Memory(MB) | The memory in MB used by the node |
-| Nodes/{node}/Sockets |  The count of open sockets in the node |
-| Nodes/{node}/Channels/Count | The count of channels in the node |
-| Nodes/{node}/Channels/Blocked |  The count of BLOCKED channels in the node |
-| Nodes/{node}/Messages/Delivered | The count of messages 'deliver' in the node |
-| Nodes/{node}/Messages/Acknowledged | The count of messages 'ack' in the node |
-| Nodes/{node}/Messages/Got No-Ack | The count of messages with the status 'get_no_ack' in the node |
-| Nodes/{node}/Messages/Delivered No-Ack | The count of messages with the status 'deliver_no_ack' in the node  |
-| Nodes/{node}/Messages/Redelivered | The count of messages with the status 'redeliver' in the node |
-| Nodes/{node}/Messages/Published | The count of messages with the status 'publish' in the node |
-| Nodes/{node}/Messages/Available | The count of messages with the status 'messages_ready' in the node |
-| Nodes/{node}/Messages/Pending Acknowledgements | The count of messages with the status 'messages_unacknowledged' in the node |
-| Nodes/{node}/Consumers/Count | The count of consumers for the node |
-| Queues/{vHost}/{qName}/Consumers | The consumer count of a queue in a host |
-| Queues/{vHost}/{qName}/Messages/Acknowledged | The count of messages with the status 'ack' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Available | The count of messages with the status 'messages_ready' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Delivered (Total) | The count of messages with the status 'deliver_get' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Delivered | The count of messages with the status 'deliver' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Delivered No-Ack | The count of messages with the status 'deliver_no_ack' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Got | The count of messages with the status 'get' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Got No-Ack | The count of messages with the status 'get_no_ack' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Published | The count of messages with the status 'publish' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Redelivered | The count of messages with the status 'redeliver' in the host and the given queue |
-| Queues/{vHost}/{qName}/Messages/Pending Acknowledgements | The count of messages with the status 'messages_unacknowledged' in the host and the given queue |
-| Summary/Channels | The total number of channels registered in the server |
-| Summary/Consumers | The total number of Consumers registered in the server |
-| Summary/Messages/Available | The total count of messages with the status 'messages_ready' in the RabbitMQ server |
-| Summary/Messages/Delivered (Total) | The total count of messages with the status 'deliver_get' in the RabbitMQ server |
-| Summary/Messages/Published | The total count of messages with the status 'publish' in the RabbitMQ server |
-| Summary/Messages/Redelivered | The total count of messages with the status 'redeliver' in the RabbitMQ server |
-| Summary/Messages/Pending Acknowledgements | The total count of messages with the status 'messages_unacknowledged' in the RabbitMQ server |
-| Summary/Queues | The count of queues in the RabbitMQ Server |
+This starts an http server at http://host:9090/. This can be accessed from the browser.
+If the server is not accessible from outside/browser, you can use the following end points to see the list of registered metrics and errors.
+#Get the stats
+    curl http://localhost:9090/api/stats
+    #Get the registered metrics
+    curl http://localhost:9090/api/metric-paths
+You can make the changes to config.yml and validate it from the browser or the API
+Once the configuration is complete, you can kill the workbench and start the Machine Agent.
+
 
 
 ##Password Encryption Support 
