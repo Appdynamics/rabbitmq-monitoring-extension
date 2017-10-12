@@ -404,7 +404,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 
 				for (Map<String, String> prop : queueMessageStatsPropsList) {
-					BigInteger value = getMetricValue(prop, queue);
+					BigInteger value = getMetricValue(prop, queue.get("message_stats"));
 					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
 						printCollectiveObservedCurrent(msgPrefix + metricName, value, prop.get("metricType"), Boolean.valueOf(prop.get("collectDelta")));
