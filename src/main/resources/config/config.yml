@@ -246,20 +246,6 @@ metrics:
            metricType: "OBS.CUR.COL"
            collectDelta: "true"
            prefix: "|Summary|Consumers"
-     #Per Minute Metrics, All these metric suffixes will be reported as per minute also
-   - perMinMetricSuffixes:
-         - name: "|Messages|Delivered (Total)"
-           metricType: "OBS.CUR.COL"
-           collectDelta: "false"
-         - name: "|Messages|Published"
-           metricType: "OBS.CUR.COL"
-           collectDelta: "false"
-         - name: "|Messages|Acknowledged"
-           metricType: "OBS.CUR.COL"
-           collectDelta: "false"
-         - name: "|Messages|Redelivered"
-           metricType: "OBS.CUR.COL"
-           collectDelta: "false"
 
 #This will create this metric in all the tiers, under this path
 metricPrefix: Custom Metrics | RabbitMQ |

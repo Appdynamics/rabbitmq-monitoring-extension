@@ -137,7 +137,6 @@ public class RabbitMQMonitoringTask implements Runnable{
 	}
 	public RabbitMQMonitoringTask(){};
 
-	private Map<String, BigInteger> perMinMetricsMap = new HashMap<String, BigInteger>();
 
 	public void run() {
 		try {
@@ -721,7 +720,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 			printMetric(metricName + " Delta",
 					deltaMetricValue != null ? deltaMetricValue.toBigInteger() : new BigInteger("0"), metricType);
 		}
-		if (metricValue != null) {
+/*		if (metricValue != null) {
 
 			List<Map<String, String>> perMinMetricSuffixesList= allMetricsFromConfig.get("perMinMetricSuffixes");
 
@@ -736,7 +735,7 @@ public class RabbitMQMonitoringTask implements Runnable{
 					perMinMetricsMap.put(metricName, metricValue);
 				}
 			}
-		}
+		}*/
 	}
 
 	protected void printCollectiveObservedAverage(String metricName, BigInteger metricValue, String metricType, Boolean collectDelta) {
