@@ -696,17 +696,16 @@ public class RabbitMQMonitoringTask implements Runnable{
 
 	public void printMetric(String metricName, BigInteger metricValue, String metricType) {
 
-		String value;
-		if (metricValue != null) {
-			value = metricValue.toString();
-		} else {
-			value = "0";
+		BigInteger metricValueNonNull = metricValue;
+		if (metricValue == null) {
+			metricValueNonNull = new BigInteger("0");
 		}
+
 		if (logger.isDebugEnabled()) {
 			logger.debug("Sending ["
-					+ "] metric = " + metricPrefix + metricName + " = " + value);
+					+ "] metric = " + metricPrefix + metricName + " = " + metricValueNonNull.toString());
 		}
-		this.configuration.getMetricWriter().printMetric(metricPrefix + metricName, new BigDecimal(metricValue),metricType);
+		this.configuration.getMetricWriter().printMetric(metricPrefix + metricName, new BigDecimal(metricValueNonNull),metricType);
 
 	}
 
