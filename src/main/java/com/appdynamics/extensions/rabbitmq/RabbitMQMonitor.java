@@ -1,5 +1,19 @@
 package com.appdynamics.extensions.rabbitmq;
 
+import com.appdynamics.extensions.ABaseMonitor;
+import com.appdynamics.extensions.TaskInputArgs;
+import com.appdynamics.extensions.TasksExecutionServiceProvider;
+import com.appdynamics.extensions.crypto.CryptoUtil;
+import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
+import com.appdynamics.extensions.rabbitmq.conf.Instances;
+import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.List;
@@ -7,29 +21,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.appdynamics.TaskInputArgs;
-import com.appdynamics.extensions.crypto.CryptoUtil;
-import com.appdynamics.extensions.util.DeltaMetricsCalculator;
-import com.google.common.collect.Maps;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
-import com.appdynamics.extensions.conf.MonitorConfiguration;
-import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
-import com.appdynamics.extensions.rabbitmq.conf.Instances;
-import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
-import com.appdynamics.extensions.util.MetricWriteHelper;
-import com.appdynamics.extensions.util.MetricWriteHelperFactory;
-import com.google.common.base.Strings;
-import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
-import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
-import com.singularity.ee.agent.systemagent.api.TaskOutput;
-import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import org.apache.log4j.PatternLayout;
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,74 +29,22 @@ import org.apache.log4j.PatternLayout;
  * Time: 5:02 PM
  * To change this template use File | Settings | File Templates.
  */
-public class RabbitMQMonitor extends AManagedMonitor {
+public class RabbitMQMonitor extends ABaseMonitor {
 	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitor");
 	public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
 
 	private String metricPrefix = DEFAULT_METRIC_PREFIX;
 
-	private MonitorConfiguration configuration;
-
 	//Holds the Key-Description Mapping
 	private Map<String, String> dictionary;
 
-	private final DeltaMetricsCalculator deltaCalculator = new DeltaMetricsCalculator(10);
 
-
-	private boolean initialized;
 	protected Instances instances = new Instances();
 
 	public RabbitMQMonitor() {
 		String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
 		logger.info(msg);
 		dictionary = new HashMap<String, String>();
-	}
-
-	private void configure(Map<String, String> argsMap) {
-		logger.info("Initializing the RabbitMQ Configuration");
-		MetricWriteHelper metricWriteHelper = MetricWriteHelperFactory.create(this);
-		MonitorConfiguration conf = new MonitorConfiguration(metricPrefix, new TaskRunnable(), metricWriteHelper);
-		String configFileName = argsMap.get("config-file");
-		if(Strings.isNullOrEmpty(configFileName)){
-			configFileName = "monitors/RabbitMQMonitor/config.yml";
-		}
-		conf.setConfigYml(configFileName);
-		conf.checkIfInitialized(MonitorConfiguration.ConfItem.CONFIG_YML, MonitorConfiguration.ConfItem.EXECUTOR_SERVICE,
-				MonitorConfiguration.ConfItem.METRIC_PREFIX, MonitorConfiguration.ConfItem.METRIC_WRITE_HELPER);
-		this.configuration = conf;
-		String prefix = (String)this.configuration.getConfigYml().get("metricPrefix");
-		if(!Strings.isNullOrEmpty(prefix)){
-			metricPrefix = prefix;
-		}
-		initialized = true;
-	}
-
-	private class TaskRunnable implements Runnable {
-
-		public void run() {
-			Map<String, ?> config = configuration.getConfigYml();
-			String excludeQueueRegex = instances.getExcludeQueueRegex();
-			if(config!=null){
-				for(InstanceInfo info : instances.getInstances()){
-					configuration.getExecutorService().execute(new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix,excludeQueueRegex, deltaCalculator));
-				}
-			}
-			else{
-				logger.error("Configuration not found");
-			}
-		}
-	}
-	public TaskOutput execute(Map<String, String> argsMap, TaskExecutionContext executionContext) throws TaskExecutionException {
-		if (!initialized) {
-			configure(argsMap);
-		}
-		initialiseInstances(this.configuration.getConfigYml());
-		logger.info("Starting the RabbitMQ Metric Monitoring task");
-		if (logger.isDebugEnabled()) {
-			logger.debug("The arguments after appending the default values are " + argsMap);
-		}
-		configuration.executeTask();
-		return new TaskOutput("RabbitMQ Metric Upload Complete ");
 	}
 
 	private void initialiseInstances(Map<String, ?> configYml) {
@@ -209,6 +148,34 @@ public class RabbitMQMonitor extends AManagedMonitor {
 
 	public static String getImplementationVersion() {
 		return RabbitMQMonitor.class.getPackage().getImplementationTitle();
+	}
+
+	protected String getDefaultMetricPrefix() {
+		return metricPrefix;
+	}
+
+	public String getMonitorName() {
+		return "RabbitMQ Monitor";
+	}
+
+	protected void doRun(TasksExecutionServiceProvider tasksExecutionServiceProvider) {
+		Map<String, ?> config = configuration.getConfigYml();
+		initialiseInstances(this.configuration.getConfigYml());
+		String excludeQueueRegex = instances.getExcludeQueueRegex();
+		metricPrefix = configuration.getMetricPrefix() + "|";
+		if(config!=null){
+			for(InstanceInfo info : instances.getInstances()){
+				RabbitMQMonitoringTask task = new RabbitMQMonitoringTask(configuration, info,dictionary,instances.getQueueGroups(),metricPrefix,excludeQueueRegex, tasksExecutionServiceProvider.getMetricWriteHelper());
+				 tasksExecutionServiceProvider.submit((String) info.getDisplayName(), task);
+			}
+		}
+		else{
+			logger.error("Configuration not found");
+		}
+	}
+
+	protected int getTaskCount() {
+		return 0;
 	}
 
 	public static void main(String [] args){
