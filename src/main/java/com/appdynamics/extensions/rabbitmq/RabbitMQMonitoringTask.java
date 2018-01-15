@@ -123,9 +123,6 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 	public void setMetrics(List<Metric> metrics) {
 		this.metrics = metrics;
 	}
-
-	private static final String DEFAULT_METRIC_TYPE = "OBS.CUR.COL";
-
 	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix,String excludeQueueRegex, MetricWriteHelper metricWriteHelper){
 		this();
 		this.configuration = conf;
@@ -177,11 +174,6 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 
 			if (metrics != null && metrics.size() > 0) {
 				logger.debug("Printing rabbitmq metrics list of size " + metrics.size());
-				for(Metric metric: metrics){
-					logger.debug("Metrics name: " + metric.getMetricName() + " - Value: " + metric.getMetricValue() + " - Path: " + metric.getMetricPath());
-					logger.debug("Property clusterType:" + metric.getClusterRollUpType() + " - Aggregation: " + metric.getAggregationType() +
-							" - TimeRollup: " + metric.getTimeRollUpType() + " - Delta: " + metric.getMetricProperties().getDelta());
-				}
 				metricWriteHelper.transformAndPrintMetrics(metrics);
 			}
 
@@ -387,7 +379,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 				for(Map<String, String> prop : queueGroupPropsList){
 					consumers = getMetricValue(prop, queue);
 					if (showIndividualStats) {
-						Metric metric = new Metric(prop.get("name"), String.valueOf(consumers), metricPrefix + prefix, prop);
+						Metric metric = new Metric(prop.get("name"), String.valueOf(consumers), metricPrefix + prefix + prop.get("name"), prop);
 						metrics.add(metric);
 					}
 					groupStat.add(groupPrefix + prop.get("name"), consumers);
@@ -403,7 +395,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 					BigInteger value = getMetricValue(prop, queue);
 					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix, prop);
+						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix + metricName, prop);
 						metrics.add(metric);
 					}
 
@@ -420,7 +412,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 					BigInteger value = getChildrenCount(prop.get("name"), queue, 0);
 					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + replicationPrefix, prop);
+						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + replicationPrefix + metricName, prop);
 						metrics.add(metric);
 					}
 				}
@@ -432,7 +424,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 					BigInteger value = getMetricValue(prop, queue.get("message_stats"));
 					String metricName = getPropDesc(prop.get("name"));
 					if (showIndividualStats) {
-						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix, prop);
+						Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix + metricName, prop);
 						metrics.add(metric);
 					}
 					groupStat.add(grpMsgPrefix + prop.get("name"), consumers);
@@ -462,7 +454,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 				for (GroupStat groupStat : groupStats) {
 					Map<String, BigInteger> groupValMap = groupStat.getValueMap();
 					for (String metricVal : groupValMap.keySet()) {
-						metric = new Metric(metricVal, String.valueOf(groupValMap.get(metricVal)), metricPrefix + summaryPrefix, groupStat.getMetricPropertiesMap());
+						metric = new Metric(metricVal, String.valueOf(groupValMap.get(metricVal)), metricPrefix + metricVal, groupStat.getMetricPropertiesMap());
 						metrics.add(metric);
 					}
 				}
@@ -531,7 +523,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 						}
 					}
 
-					metrics.add(new Metric(prefix, String.valueOf(getBlockedChannelCount(nodeChannels)), metricPrefix + prefix + "|Channels|Blocke"));
+					metrics.add(new Metric(prefix, String.valueOf(getBlockedChannelCount(nodeChannels)), metricPrefix + prefix + "|Channels|Blocked"));
 
 					//Nodes|$node|Messages
 					addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels);
@@ -596,7 +588,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 			for (Map<String, String> prop : queueNodePropsList) {
 				BigInteger value = getMetricValue(prop, queue);
 				if(value!=null) {
-					Metric metric = new Metric(prop.get("name"), String.valueOf(value), metricPrefix, prop);
+					Metric metric = new Metric(prop.get("name"), String.valueOf(value), metricPrefix  + "|" + dictionary.get(prop.get("name")), prop);
 					metrics.add(metric);
 				}
 			}
@@ -620,7 +612,7 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 				if (msgStats != null) {
 					BigInteger statVal = getMetricValue(prop, channel);
 					if(statVal!=null) {
-						metrics.add(new Metric(prop.get("name"), String.valueOf(statVal), metricPrefix, prop));
+						metrics.add(new Metric(prop.get("name"), String.valueOf(statVal), metricPrefix + "|" + dictionary.get(prop.get("name")), prop));
 					}
 				}
 			}

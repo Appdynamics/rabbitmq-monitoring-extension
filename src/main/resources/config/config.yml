@@ -104,10 +104,15 @@ metrics:
      #Items in Summary|Messages - data looked up from /api/queues
    - queueSummaryProps:
          - name: "messages_ready"
+           delta: "true"
          - name: "deliver_get"
+           delta: "true"
          - name: "publish"
+           delta: "true"
          - name: "redeliver"
+           delta: "true"
          - name: "messages_unacknowledged"
+           delta: "true"
      #Items in Clusters|<Cluster>|Queues - data looked up from /api/overview
    - queueTotalsProps:
          - name: "messages"
@@ -117,7 +122,7 @@ metrics:
    - messageTotalsProps:
          - name: "publish"
          - name: "deliver_get"
-         - name: "confirm"
+         - name: "ack"
          - name: "get"
      #Items in Clusters|<Cluster>|Objects - data looked up from /api/overview
    - objectTotalsProps:

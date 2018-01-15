@@ -1,14 +1,14 @@
 package com.appdynamics.extensions.rabbitmq;
 
-import java.io.File;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
+import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
-import com.appdynamics.extensions.util.DeltaMetricsCalculator;
+import com.appdynamics.extensions.yml.YmlReader;
 import com.google.common.base.Strings;
+import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
@@ -17,45 +17,63 @@ import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
 
-import com.appdynamics.extensions.conf.MonitorConfiguration;
-import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
-import com.appdynamics.extensions.rabbitmq.conf.Instances;
-import com.appdynamics.extensions.yml.YmlReader;
-import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+@RunWith(MockitoJUnitRunner.class)
 public class RabbitMQMonitoringTaskTest {
+
+    @Mock
+    private MetricWriteHelper metricWriter;
+    private Map config;
+
 	private RabbitMQMonitoringTask task;
 	public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
 	private Map<String, String> expectedValueMap = new HashMap<String, String>();
 	private Map<String,String> dictionary = new HashMap<String, String>();
     private Map<String, List<Map<String, String>>> allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
-    private DeltaMetricsCalculator deltaCalculator = new DeltaMetricsCalculator(10);
+    private List<Metric> metrics = new ArrayList<Metric>();
+
+
 	@Before
 	public void before(){
 		task = Mockito.spy(new RabbitMQMonitoringTask());
+
+        //metricWriter = Mockito.mock(MetricWriteHelper.class);
+        task.setMetricWriteHelper(metricWriter);
         initDictionary();
 			doAnswer(new Answer(){
 
 			public Object answer(InvocationOnMock invocation) throws Throwable {
-				String actualValue = ((BigInteger) invocation.getArguments()[1]).toString();
-				String metricName = (String) invocation.getArguments()[0];
-				if (expectedValueMap.containsKey(metricName)) {
-					String expectedValue = expectedValueMap.get(metricName);
-					Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
-					expectedValueMap.remove(metricName);
-				} else {
-                    System.out.println("\""+metricName+"\",\""+actualValue+"\"");
-					Assert.fail("Unknown Metric " + metricName);
-				}
+			    for(Metric metric: metrics) {
+
+                    String actualValue = metric.getMetricValue();
+                    String metricName = metric.getMetricPath();
+                    if (expectedValueMap.containsKey(metricName)) {
+                        String expectedValue = expectedValueMap.get(metricName);
+                        Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
+                        expectedValueMap.remove(metricName);
+                    } else {
+                        System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
+                        Assert.fail("Unknown Metric " + metricName);
+                    }
+                }
 				return null;
-			}}).when(task).printMetric(anyString(), Mockito.any(BigInteger.class), anyString());
+			}}).when(metricWriter).transformAndPrintMetrics(metrics);
 
 			doAnswer(new Answer() {
 				public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -97,22 +115,27 @@ public class RabbitMQMonitoringTaskTest {
     
     @Test
     public void testWithGroupsNoIndividual() throws TaskExecutionException {
+
     	expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
+
         Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
-        
+
+
         MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
         task.setConfiguration(conf);
         task.setDictionary(dictionary);
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setDeltaCalculator(deltaCalculator);
         task.setInfo(instances.getInstances()[0]);
         task.setQueueGroups(instances.getQueueGroups());
+        task.setMetricPrefix("");
+        task.setMetrics(metrics);
+
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -136,9 +159,10 @@ public class RabbitMQMonitoringTaskTest {
         task.setDictionary(dictionary);
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setDeltaCalculator(deltaCalculator);
         task.setInfo(instances.getInstances()[0]);
         task.setQueueGroups(instances.getQueueGroups());
+        task.setMetricPrefix("");
+        task.setMetrics(metrics);
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -160,8 +184,9 @@ public class RabbitMQMonitoringTaskTest {
         task.setDictionary(dictionary);
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setDeltaCalculator(deltaCalculator);
         task.setInfo(instances.getInstances()[0]);
+        task.setMetricPrefix("");
+        task.setMetrics(metrics);
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -190,157 +215,176 @@ public class RabbitMQMonitoringTaskTest {
 		
 	}
 	private void initExpectedClusterMetrics(){
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published","45");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published Delta","0");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","16");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged Delta","0");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total)","27");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total) Delta","0");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered","21");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered Delta","0");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Total","3");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Running","3");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published","31");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published Delta","0");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","29");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total)","32");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total) Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Messages","13");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Messages Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Available","13");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Available Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Pending Acknowledgements","7");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Pending Acknowledgements Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|queues","3");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|queues Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|exchanges","11");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|exchanges Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|connections","3");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|connections Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels","1");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|consumers","1");
+        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|consumers Delta","0");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Total","1");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Running","1");
         expectedValueMap.put("Clusters|rabbitmqCluster|Cluster Health","1");
         expectedValueMap.put("Availability","1");
     }
 
     private void initExpectedFederationMetrics() {
-        expectedValueMap.put("Federations|testExchange|testExchange_upstream_0|running", "0");
-        expectedValueMap.put("Federations|testExchange|testExchange_upstream_1|running", "1");
+        expectedValueMap.put("Federations|myexch1|myexch1_upstream_0|running", "0");
+        expectedValueMap.put("Federations|myexch1|myexch1_upstream_1|running", "1");
     }
 
     private void initExpectedQueueMetrics() {
-        expectedValueMap.put("Queues|Default|Node1Q1|Consumers", "1");
-        expectedValueMap.put("Queues|Default|Node1Q1|Consumers Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Available", "37");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Available Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Pending Acknowledgements Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Acknowledged", "8");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Acknowledged Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered (Total)", "30");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered (Total) Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered", "18");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered No-Ack", "20");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Delivered No-Ack Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Got", "6");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Got Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Got No-Ack", "12");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Got No-Ack Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Published", "30");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Published Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Redelivered", "25");
-        expectedValueMap.put("Queues|Default|Node1Q1|Messages|Redelivered Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Synchronized Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Synchronized Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Down Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Down Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node1Q1|Replication|Slaves Count Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1consumers", "1");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "36");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Available Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "50");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged", "8");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered (Total)", "20");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered (Total) Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered", "18");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack", "20");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Got", "6");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Got Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Published Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
+        //expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count Delta", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count Delta", "0");
+        /*expectedValueMap.put("Summary|Messages|Available", "37");
+        expectedValueMap.put("Summary|Messages|Delivered (Total)", "23");
+        expectedValueMap.put("Summary|Messages|Published", "34");
+        expectedValueMap.put("Summary|Messages|Redelivered", "28");
+        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "52");
+        expectedValueMap.put("Summary|Queues", "2");*/
 
-        expectedValueMap.put("Queues|Default|Node2Q2|Consumers", "1");
-        expectedValueMap.put("Queues|Default|Node2Q2|Consumers Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Available", "16");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Available Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Pending Acknowledgements", "17");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Pending Acknowledgements Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Acknowledged", "11");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Acknowledged Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered (Total)", "8");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered (Total) Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered", "12");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered No-Ack", "26");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Delivered No-Ack Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Got", "6");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Got Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Got No-Ack", "16");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Got No-Ack Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Published", "14");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Published Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Redelivered", "36");
-        expectedValueMap.put("Queues|Default|Node2Q2|Messages|Redelivered Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Synchronized Slaves Count", "1");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Synchronized Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Down Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Down Slaves Count Delta", "0");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Slaves Count", "1");
-        expectedValueMap.put("Queues|Default|Node2Q2|Replication|Slaves Count Delta", "0");
+
+
+        expectedValueMap.put("Queues|Default|node2q2consumers", "1");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "1");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Available Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "2");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged", "0");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered (Total)", "3");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered (Total) Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered", "3");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered No-Ack", "1");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered No-Ack Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Got", "0");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Got Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Got No-Ack", "1");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Published", "4");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Published Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered", "3");
+        //expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count Delta", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count", "0");
+        //expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count Delta", "0");
+
     }
 
     private void initExpectedSummaryMetrics() {
-        expectedValueMap.put("|Summary|Channels", "0");
-        expectedValueMap.put("|Summary|Consumers", "1");
-        expectedValueMap.put("|Summary|Queues", "2");
-        expectedValueMap.put("|Summary|Messages|Delivered (Total)", "38");
-        expectedValueMap.put("|Summary|Messages|Delivered (Total) Delta", "0");
-        expectedValueMap.put("|Summary|Messages|Published", "34");
-        expectedValueMap.put("|Summary|Messages|Published Delta", "0");
-        expectedValueMap.put("|Summary|Messages|Available", "53");
-        expectedValueMap.put("|Summary|Messages|Available Delta", "0");
-        expectedValueMap.put("|Summary|Messages|Redelivered", "28");
-        expectedValueMap.put("|Summary|Messages|Redelivered Delta", "0");
-        expectedValueMap.put("|Summary|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("|Summary|Messages|Pending Acknowledgements Delta", "0");
+        expectedValueMap.put("|Summary|Channels", "2");
+        expectedValueMap.put("Summary|Consumers", "2");
+        expectedValueMap.put("Summary|Queues", "2");
+        expectedValueMap.put("Summary|Messages|Delivered (Total)", "23");
+        expectedValueMap.put("Summary|Messages|Published", "34");
+        expectedValueMap.put("Summary|Messages|Available", "37");
+        expectedValueMap.put("Summary|Messages|Redelivered", "28");
+        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "52");
     }
 
     private void initExpectedGroupMetrics() {
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Redelivered", "28");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Redelivered Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered", "21");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered (Total)", "38");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered (Total) Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Published", "34");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Published Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack", "21");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got", "12");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "53");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Consumers", "1");
-        expectedValueMap.put("Queue Groups|Default|group1|Consumers Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "14");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "13");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack Delta", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|redeliver", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|redeliver Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_get", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_get Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|publish", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|publish Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_no_ack", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_no_ack Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|get", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|get Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1messages_ready", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1messages_ready Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1consumers", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|ack", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|ack Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack Delta", "0");
+        expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged", "2");
+        //expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged Delta", "0");
     }
 
     private void initExpectedNodeMetrics() {
         expectedValueMap.put("Nodes|rabbit@rabbit1|Erlang Processes", "210");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Erlang Processes Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Erlang Processes Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB)", "121");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB) Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB) Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets", "3");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "18");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "8");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count", "1");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors", "26");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "12");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack", "20");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered", "25");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published", "30");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available", "37");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements Delta", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available", "36");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements", "50");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Count", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Count Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers Delta", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
 

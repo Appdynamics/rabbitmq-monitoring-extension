@@ -36,6 +36,7 @@
         "messages_unacknowledged_details": {
             "rate": 0.0
         },
+        "slave_nodes":"",
         "idle_since": "2017-07-07 19:04:28",
         "policy": "",
         "exclusive_consumer_tag": "",
@@ -120,7 +121,7 @@
             "avg_ack_egress_rate": 0.1330738416070475
         },
         "status": "running",
-        "name": "Node2Q2",
+        "name": "node2q2",
         "vhost": "/",
         "durable": true,
         "auto_delete": false,
