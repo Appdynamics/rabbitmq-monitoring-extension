@@ -39,7 +39,6 @@ public class RabbitMQMonitoringTaskTest {
 
     @Mock
     private MetricWriteHelper metricWriter;
-    private Map config;
 
 	private RabbitMQMonitoringTask task;
 	public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
@@ -53,7 +52,6 @@ public class RabbitMQMonitoringTaskTest {
 	public void before(){
 		task = Mockito.spy(new RabbitMQMonitoringTask());
 
-        //metricWriter = Mockito.mock(MetricWriteHelper.class);
         task.setMetricWriteHelper(metricWriter);
         initDictionary();
 			doAnswer(new Answer(){

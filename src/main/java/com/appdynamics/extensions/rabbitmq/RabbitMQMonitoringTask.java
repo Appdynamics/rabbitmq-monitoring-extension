@@ -28,42 +28,22 @@ import java.util.List;
 import java.util.Map;
 
 public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
-	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitorTask");
-
-	public MonitorConfiguration getConfiguration() {
-		return configuration;
-	}
+	public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTask.class);
 
 	public void setConfiguration(MonitorConfiguration configuration) {
 		this.configuration = configuration;
-	}
-
-	public InstanceInfo getInfo() {
-		return info;
 	}
 
 	public void setInfo(InstanceInfo info) {
 		this.info = info;
 	}
 
-	public Map<String, String> getDictionary() {
-		return dictionary;
-	}
-
 	public void setDictionary(Map<String, String> dictionary) {
 		this.dictionary = dictionary;
 	}
 
-	public QueueGroup[] getQueueGroups() {
-		return queueGroups;
-	}
-
 	public void setQueueGroups(QueueGroup[] queueGroups) {
 		this.queueGroups = queueGroups;
-	}
-
-	public String getMetricPrefix() {
-		return metricPrefix;
 	}
 
 	public void setMetricPrefix(String metricPrefix) {
@@ -90,39 +70,24 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 
 	private List<Metric> metrics;
 
-	public List<Map<String, List<Map<String, String>>>> getMetricsFromConfig() {
-		return metricsFromConfig;
-	}
-
 	public void setMetricsFromConfig(List<Map<String, List<Map<String, String>>>> metricsFromConfig) {
 		this.metricsFromConfig = metricsFromConfig;
 	}
 
 	private Map<String, List<Map<String, String>>> allMetricsFromConfig;
 
-	public Map<String, List<Map<String, String>>> getAllMetricsFromConfig() {
-		return allMetricsFromConfig;
-	}
-
 	public void setAllMetricsFromConfig(Map<String, List<Map<String, String>>> allMetricsFromConfig) {
 		this.allMetricsFromConfig = allMetricsFromConfig;
-	}
-
-	public MetricWriteHelper getMetricWriteHelper() {
-		return metricWriteHelper;
 	}
 
 	public void setMetricWriteHelper(MetricWriteHelper metricWriteHelper) {
 		this.metricWriteHelper = metricWriteHelper;
 	}
 
-	public List<Metric> getMetrics() {
-		return metrics;
-	}
-
 	public void setMetrics(List<Metric> metrics) {
 		this.metrics = metrics;
 	}
+
 	public RabbitMQMonitoringTask(MonitorConfiguration conf,InstanceInfo info,Map<String,String> dictionary,QueueGroup[] queueGroups,String metricPrefix,String excludeQueueRegex, MetricWriteHelper metricWriteHelper){
 		this();
 		this.configuration = conf;
@@ -180,8 +145,6 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 			logger.info("Completed the RabbitMQ Metric Monitoring task");
 		} catch (Exception e) {
 			metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), metricPrefix + "Availability"));
-
-
 			logger.error("Unexpected error while running the RabbitMQ Monitor", e);
 		}
 
@@ -276,8 +239,6 @@ public class RabbitMQMonitoringTask implements AMonitorTaskRunnable{
 				//Total Nodes
 				String nodePrefix = prefix + "Nodes|";
 				if (nodes != null) {
-					/*printCollectiveObservedAverage(nodePrefix + "Total",
-										new BigInteger(String.valueOf(nodes.size())), DEFAULT_METRIC_TYPE, false);*/
 					Metric metric = new Metric("Total", String.valueOf(nodes.size()), metricPrefix + nodePrefix + "Total");
 					metrics.add(metric);
 					int runningCount = 0;

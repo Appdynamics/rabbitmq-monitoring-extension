@@ -7,6 +7,7 @@ import com.appdynamics.extensions.crypto.CryptoUtil;
 import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.conf.Instances;
 import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.appdynamics.extensions.util.AssertUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import org.apache.log4j.ConsoleAppender;
@@ -30,10 +31,9 @@ import java.util.concurrent.TimeUnit;
  * To change this template use File | Settings | File Templates.
  */
 public class RabbitMQMonitor extends ABaseMonitor {
-	public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.RabbitMQMonitor");
-	public static final String DEFAULT_METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
+	public static final Logger logger = Logger.getLogger(RabbitMQMonitor.class);
 
-	private String metricPrefix = DEFAULT_METRIC_PREFIX;
+	private String metricPrefix = "Custom Metrics|RabbitMQ|";
 
 	//Holds the Key-Description Mapping
 	private Map<String, String> dictionary;
@@ -175,7 +175,9 @@ public class RabbitMQMonitor extends ABaseMonitor {
 	}
 
 	protected int getTaskCount() {
-		return 0;
+		List<Map<String, String>> instances = (List<Map<String, String>>) configuration.getConfigYml().get("servers");
+		AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
+		return instances.size();
 	}
 
 	public static void main(String [] args){

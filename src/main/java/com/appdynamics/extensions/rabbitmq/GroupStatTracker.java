@@ -11,7 +11,7 @@ import java.util.Map;
  * Created by abey.tom on 9/16/14.
  */
 public class GroupStatTracker {
-    public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.GroupStatTracker");
+    public static final Logger logger = Logger.getLogger(GroupStatTracker.class);
 
     private Map<String, GroupStat> groupStatMap;
     private QueueGroup[] queueGroups;
