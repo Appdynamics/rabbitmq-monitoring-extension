@@ -5,7 +5,7 @@
 	"displayName" : "RabbitMQ Extension",
 	"version" : "1.0.9",
 	"downloadLink" : "https://github.com/Appdynamics/rabbitmq-monitoring-extension/releases/download/1.0.9/RabbitMQMonitor.zip",
-	"imageLink" : "https://no-cache.appdynamics-static.com/appsphere/logos/rabbitmq_128.png",
+	"imageLink" : "https:///www.appdynamics.com/media/uploaded-images/1439426170/.thumbnails/rabbitmq_128-52x0.png",
 	"defaultConfigs" : [
 		{
 			"name" : "monitor.xml",
