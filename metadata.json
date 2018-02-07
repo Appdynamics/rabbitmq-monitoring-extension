@@ -9,7 +9,7 @@
 	"configs" : [
 		{
 			"name" : "monitor.xml",
-			"link" : "https://raw.githubusercontent.com/Appdynamics/rabbitmq-monitoring-extension/master/src/main/resources/config/monitor.xml",
+			"link" : "https://raw.githubusercontent.com/Appdynamics/rabbitmq-monitoring-extension/master/src/main/resources/config/monitor.xml"
 		},
 		{
 			"name" : "config.yml",
