@@ -1,4 +1,4 @@
-package com.appdynamics.extensions.rabbitmq.conf;
+package com.appdynamics.extensions.rabbitmq.instance;
 
 public class InstanceInfo {
 

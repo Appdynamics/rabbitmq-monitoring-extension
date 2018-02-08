@@ -1,6 +1,5 @@
-package com.appdynamics.extensions.rabbitmq;
+package com.appdynamics.extensions.rabbitmq.queueGroup;
 
-import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;

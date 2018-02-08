@@ -1,4 +1,4 @@
-package com.appdynamics.extensions.rabbitmq;
+package com.appdynamics.extensions.rabbitmq.queueGroup;
 
 import java.math.BigInteger;
 import java.util.HashMap;

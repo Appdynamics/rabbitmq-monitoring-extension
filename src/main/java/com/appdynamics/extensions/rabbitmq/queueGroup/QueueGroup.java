@@ -1,4 +1,4 @@
-package com.appdynamics.extensions.rabbitmq.conf;
+package com.appdynamics.extensions.rabbitmq.queueGroup;
 
 /**
  * Created by abey.tom on 9/16/14.

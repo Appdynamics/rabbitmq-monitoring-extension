@@ -1,4 +1,6 @@
-package com.appdynamics.extensions.rabbitmq.conf;
+package com.appdynamics.extensions.rabbitmq.instance;
+
+import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 
 public class Instances {
 	

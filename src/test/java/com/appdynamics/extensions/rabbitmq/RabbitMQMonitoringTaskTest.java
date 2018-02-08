@@ -1,11 +1,12 @@
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.MetricWriteHelper;
+import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
-import com.appdynamics.extensions.rabbitmq.conf.InstanceInfo;
-import com.appdynamics.extensions.rabbitmq.conf.Instances;
-import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
+import com.appdynamics.extensions.rabbitmq.instance.Instances;
+import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
@@ -16,6 +17,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -34,30 +36,45 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+
 @RunWith(MockitoJUnitRunner.class)
 public class RabbitMQMonitoringTaskTest {
+
+
+    @Mock
+    private TasksExecutionServiceProvider serviceProvider;
+
+    private Map server;
+    @Mock
+    private MonitorConfiguration monitorConfiguration;
 
     @Mock
     private MetricWriteHelper metricWriter;
 
-	private RabbitMQMonitoringTask task;
-	public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
-	private Map<String, String> expectedValueMap = new HashMap<String, String>();
-	private Map<String,String> dictionary = new HashMap<String, String>();
+
+
+    private RabbitMQMonitorTask task;
+    public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
+    private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));;
+
+    private Map<String, String> expectedValueMap = new HashMap<String, String>();
     private Map<String, List<Map<String, String>>> allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
+    private Map<String, String> endpointsFlag = new HashMap<String, String>();
     private List<Metric> metrics = new ArrayList<Metric>();
 
 
-	@Before
-	public void before(){
-		task = Mockito.spy(new RabbitMQMonitoringTask());
+    @Before
+    public void before(){
 
-        task.setMetricWriteHelper(metricWriter);
-        initDictionary();
-			doAnswer(new Answer(){
+        Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
+        Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
 
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-			    for(Metric metric: metrics) {
+        task = Mockito.spy(new RabbitMQMonitorTask(serviceProvider, instances.getInstances()[0], instances));
+
+        doAnswer(new Answer(){
+
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                for(Metric metric: metrics) {
 
                     String actualValue = metric.getMetricValue();
                     String metricName = metric.getMetricPath();
@@ -70,71 +87,66 @@ public class RabbitMQMonitoringTaskTest {
                         Assert.fail("Unknown Metric " + metricName);
                     }
                 }
-				return null;
-			}}).when(metricWriter).transformAndPrintMetrics(metrics);
+                return null;
+            }}).when(metricWriter).transformAndPrintMetrics(metrics);
 
-			doAnswer(new Answer() {
-				public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
 
-					ObjectMapper mapper = new ObjectMapper();
-					String url = (String) invocationOnMock.getArguments()[1];
-					String file = null;
-					if (url.contains("/nodes")) {
-						file = "/json/nodes.json";
-					} else if (url.contains("/channels")) {
-						file = "/json/channels.json";
-					} else if (url.contains("/queues")) {
-						file = "/json/queues.json";
-					}
-					logger.info("Returning the mocked data for the api " + file);
-					return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
-				}
-			}).when(task).getJson(any(CloseableHttpClient.class), anyString());
-			doAnswer(new Answer() {
-				public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-					ObjectMapper mapper = new ObjectMapper();
-					String url = (String) invocationOnMock.getArguments()[1];
-					logger.info("Returning the mocked data for the api " + url);
-					String file = null;
-					if (url.contains("/overview")) {
-						file = "/json/overview.json";
-						return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
-					} else if (url.contains("federation-links")) {
-						file = "/json/federation-links.json";
-						return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
-					}
-					return null;
+                ObjectMapper mapper = new ObjectMapper();
+                String url = (String) invocationOnMock.getArguments()[1];
+                String file = null;
+                if (url.contains("/nodes")) {
+                    file = "/json/nodes.json";
+                } else if (url.contains("/channels")) {
+                    file = "/json/channels.json";
+                } else if (url.contains("/queues")) {
+                    file = "/json/queues.json";
+                }
+                logger.info("Returning the mocked data for the api " + file);
+                return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+            }
+        }).when(task).getJson(any(CloseableHttpClient.class), anyString());
 
-				}
-			}).when(task).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
-			
-			
-	}
-    
+        doAnswer(new Answer() {
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ObjectMapper mapper = new ObjectMapper();
+                String url = (String) invocationOnMock.getArguments()[1];
+                logger.info("Returning the mocked data for the api " + url);
+                String file = null;
+                if (url.contains("/overview")) {
+                    file = "/json/overview.json";
+                    return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
+                } else if (url.contains("federation-links")) {
+                    file = "/json/federation-links.json";
+                    return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+                }
+                return null;
+
+            }
+        }).when(task).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
+
+
+    }
+
     @Test
     public void testWithGroupsNoIndividual() throws TaskExecutionException {
 
-    	expectedValueMap = new HashMap<String, String>();
+        expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
 
-        Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
-
-
-        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
-        task.setConfiguration(conf);
-        task.setDictionary(dictionary);
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setInfo(instances.getInstances()[0]);
+        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
         task.setQueueGroups(instances.getQueueGroups());
         task.setMetricPrefix("");
         task.setMetrics(metrics);
 
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
@@ -143,76 +155,48 @@ public class RabbitMQMonitoringTaskTest {
 
     @Test
     public void testWithGroupsWithIndividual() throws TaskExecutionException {
-    	expectedValueMap = new HashMap<String, String>();
+        expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
-        Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
         instances.getQueueGroups()[0].setShowIndividualStats(true);
-        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
-        task.setConfiguration(conf);
-        task.setDictionary(dictionary);
+
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setInfo(instances.getInstances()[0]);
+        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
         task.setQueueGroups(instances.getQueueGroups());
         task.setMetricPrefix("");
         task.setMetrics(metrics);
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
-    
+
     @Test
     public void checkReturnsFederationStatusWhenAvailable() throws TaskExecutionException {
-    	expectedValueMap = new HashMap<String, String>();
+        expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
-        Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
-        
-        MonitorConfiguration conf = Mockito.mock(MonitorConfiguration.class);
-        task.setConfiguration(conf);
-        task.setDictionary(dictionary);
+
         task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
         task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setInfo(instances.getInstances()[0]);
+        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
         task.setMetricPrefix("");
         task.setMetrics(metrics);
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(conf).getHttpClient();
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         task.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
-    
-    private void initDictionary() {
-		dictionary = new HashMap<String, String>();
-		dictionary.put("ack", "Acknowledged");
-		dictionary.put("deliver", "Delivered");
-		dictionary.put("deliver_get", "Delivered (Total)");
-		dictionary.put("deliver_no_ack", "Delivered No-Ack");
-		dictionary.put("get", "Got");
-		dictionary.put("get_no_ack", "Got No-Ack");
-		dictionary.put("publish", "Published");
-		dictionary.put("redeliver", "Redelivered");
-		dictionary.put("messages_ready", "Available");
-		dictionary.put("messages_unacknowledged", "Pending Acknowledgements");
-		dictionary.put("consumers", "Count");
-		dictionary.put("active_consumers", "Active");
-		dictionary.put("idle_consumers", "Idle");
-		dictionary.put("slave_nodes", "Slaves Count");
-		dictionary.put("synchronised_slave_nodes", "Synchronized Slaves Count");
-		dictionary.put("down_slave_nodes", "Down Slaves Count");
-		dictionary.put("messages", "Messages");
-		
-	}
-	private void initExpectedClusterMetrics(){
+
+    private void initExpectedClusterMetrics(){
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published","31");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published Delta","0");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","29");
@@ -261,7 +245,7 @@ public class RabbitMQMonitoringTaskTest {
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got", "6");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Got Delta", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12  ");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Published Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
@@ -352,7 +336,7 @@ public class RabbitMQMonitoringTaskTest {
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated", "0");
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB)", "121");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB)", "127895872");
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB) Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets", "3");
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets Delta", "0");
@@ -382,13 +366,13 @@ public class RabbitMQMonitoringTaskTest {
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers", "0");
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers Delta", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
+        //expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
 
     private Instances initialiseInstances(Map<String, ?> configYml) {
 
-	    Instances instancesObj = new Instances();
+        Instances instancesObj = new Instances();
         List<Map<String,?>> instances = (List<Map<String, ?>>) configYml.get("servers");
         if(instances!=null && instances.size()>0){
             int index = 0;
@@ -470,7 +454,6 @@ public class RabbitMQMonitoringTaskTest {
             logger.debug("no queue groups defined");
         }
 
-        dictionary.putAll((Map<String, String>)configYml.get("dictionary"));
 
         return instancesObj;
     }
