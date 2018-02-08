@@ -13,7 +13,7 @@
 queueGroups:
 - groupName: group1
   queueNameRegex: queue.+
-  showIndividualStats: true
+  showIndividualStats: false
 
 # Queue Group Configuration
 #- groupName: group2
@@ -39,177 +39,217 @@ servers:
 # number of concurrent tasks
 numberOfThreads: 5
 
-endpointFlags:
-  federationPlugin: "false"
-  overview: "true"
-
 dictionary:
-  #ack: "Acknowledged"
-  #deliver: "Delivered"
-  #deliver_get: "Delivered (Total)"
-  #deliver_no_ack: "Delivered No-Ack"
-  #get: "Got"
-  #get_no_ack: "Got No-Ack"
-  #publish: "Published"
-  #redeliver: "Redelivered"
-  #messages_ready: "Available"
-  #messages_unacknowledged: "Pending Acknowledgements"
-  #consumers: "Count"
-  #active_consumers: "Active"
-  #idle_consumers: "Idle"
-  #slave_nodes: "Slaves Count"
-  #synchronised_slave_nodes: "Synchronized Slaves Count"
-  #down_slave_nodes: "Down Slaves Count"
-  #messages: "Messages"
-
-#                                      List of metrics
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#Glossary of terms(These terms are used as properties for each metric):
-#   alias
-#   aggregationType
-#   timeRollUpType
-#   clusterRollUpType                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-#   multiplier -->not for derived metrics
-#   convert --> not for derived metrics
-#   delta --> not for derived metrics
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ack: "Acknowledged"
+  deliver: "Delivered"
+  deliver_get: "Delivered (Total)"
+  deliver_no_ack: "Delivered No-Ack"
+  get: "Got"
+  get_no_ack: "Got No-Ack"
+  publish: "Published"
+  redeliver: "Redelivered"
+  messages_ready: "Available"
+  messages_unacknowledged: "Pending Acknowledgements"
+  consumers: "Count"
+  active_consumers: "Active"
+  idle_consumers: "Idle"
+  slave_nodes: "Slaves Count"
+  synchronised_slave_nodes: "Synchronized Slaves Count"
+  down_slave_nodes: "Down Slaves Count"
+  messages: "Messages"
 
 metrics:
      #Items in Nodes|<node>|Messages - data looked up from /api/channels
    - channelNodeMsgProps:
          - name: "ack"
-           delta: "true"
-           alias: "Acknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver"
-           alias: "Delivered"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver_no_ack"
-           alias: "Delivered No-Ack"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "get_no_ack"
-           alias: "Got No-Ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "publish"
-           alias: "Published"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "redeliver"
-           alias: "Redelivered"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Queue Group data, stats combined by groupName defined in queueGroups above
    - queueGroupProps:
          - name: "consumers"
-           alias: "Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Nodes|<node>|Messages - data looked up from /api/queues
    - queueNodeMsgProps:
          - name: "messages_ready"
-           alias: "Available"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "messages_unacknowledged"
-           alias: "Pending Acknowledgements"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Nodes|<node>|Consumers - data looked up from /api/queues
    - queueNodeProps:
          - name: "consumers"
-           alias: "Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues
    - queueMessageProps:
          - name: "messages_ready"
-           alias: "Available"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "messages_unacknowledged"
-           alias: "Pending Acknowledgements"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Queues|<host>|<QName>|Replication - data looked up from /api/queues
    - queueReplicationCountsProps:
          - name: "slave_nodes"
-           alias: "Slaves Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "synchronised_slave_nodes"
-           alias: "Synchronized Slaves Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "down_slave_nodes"
-           alias: "Down Slaves Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats
    - queueMessageStatsProps:
          - name: "ack"
-           alias: "Acknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver_get"
-           alias: "Delivered (Total)"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver"
-           alias: "Delivered"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver_no_ack"
-           alias: "Delivered No-Ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "get"
-           alias: "Got"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "get_no_ack"
-           alias: "Got No-Ack"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "publish"
-           alias: "Published"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "redeliver"
-           alias: "Redelivered"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Summary|Messages - data looked up from /api/queues
    - queueSummaryProps:
          - name: "messages_ready"
-           delta: "true"
-           alias: "Available"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver_get"
-           alias: "Delivered (Total)"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "publish"
-           alias: "Published"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "redeliver"
-           delta: "true"
-           alias: "Redelivered"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "messages_unacknowledged"
-           alias: "Pending Acknowledgements"
-           delta: "true"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Clusters|<Cluster>|Queues - data looked up from /api/overview
    - queueTotalsProps:
          - name: "messages"
-           alias: "Messages"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "messages_ready"
-           alias: "Available"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "messages_unacknowledged"
-           alias: "Pending Acknowledgements"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Clusters|<Cluster>|Messages - data looked up from /api/overview
    - messageTotalsProps:
          - name: "publish"
-           alias: "Published"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "deliver_get"
-           alias: "Delivered (Total)"
-         - name: "ack"
-           alias: "Acknowledged"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+         - name: "confirm"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "get"
-           alias: "Got"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
      #Items in Clusters|<Cluster>|Objects - data looked up from /api/overview
    - objectTotalsProps:
          - name: "consumers"
-           alias: "Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "queues"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "exchanges"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "connections"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
          - name: "channels"
-    #Items in Nodes|<node> - data looked up from /api/nodes
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+   #Items in Nodes|<node> - data looked up from /api/nodes
    - nodeDataMetrics:
          - name: "proc_used"
-           prefix: "Erlang Processes"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Erlang Processes"
          - name: "disk_free_alarm"
-           prefix: "Disk Free Alarm Activated"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           isBoolean: "true"
+           prefix: "|Disk Free Alarm Activated"
          - name: "mem_alarm"
-           prefix: "Memory Free Alarm Activated"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           isBoolean: "true"
+           prefix: "|Memory Free Alarm Activated"
          - name: "fd_used"
-           prefix: "File Descriptors"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|File Descriptors"
          - name: "mem_used"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
            divisor: "1048576"
-           prefix: "Memory(MB)"
+           prefix: "|Memory(MB)"
          - name: "sockets_used"
-           prefix: "Sockets"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Sockets"
          - name: "channels_count"
-           prefix: "Channels|Count"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Channels|Count"
          - name: "channels_blocked"
-           prefix: "Channels|Blocked"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Channels|Blocked"
          - name: "summary_channels"
-           prefix: "Summary|Channels"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Summary|Channels"
          - name: "consumers"
-           prefix: "Summary|Consumers"
+           metricType: "OBS.CUR.COL"
+           collectDelta: "true"
+           prefix: "|Summary|Consumers"
 
 #This will create this metric in all the tiers, under this path
-metricPrefix: Custom Metrics | RabbitMQ |
+#metricPrefix: Custom Metrics | RabbitMQ |
 
 #This will create it in specific Tier/Component. Make sure to replace <COMPONENT_ID> with the appropriate one from your environment.
 #To find the <COMPONENT_ID> in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
-#metricPrefix: Server|Component:<COMPONENT_ID>|Custom Metrics|RabbitMQ|
+metricPrefix: Server|Component:<TIER NAME OR TIER ID>|Custom Metrics|RabbitMQ|
