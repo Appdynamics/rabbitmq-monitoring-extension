@@ -12,7 +12,7 @@
 # Uncomment the following lines for configuration
 queueGroups:
 - groupName: group1
-  queueNameRegex: queue.+
+  queueNameRegex: node.+
   showIndividualStats: true
 
 # Queue Group Configuration
@@ -40,7 +40,7 @@ servers:
 numberOfThreads: 5
 
 endpointFlags:
-  federationPlugin: "false"
+  federationPlugin: "true"
   overview: "true"
 
 dictionary:

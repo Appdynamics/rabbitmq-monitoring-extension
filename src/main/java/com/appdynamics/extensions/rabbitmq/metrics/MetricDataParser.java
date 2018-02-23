@@ -1,10 +1,16 @@
-package com.appdynamics.extensions.rabbitmq;
+/*
+ * Copyright 2018. AppDynamics LLC and its affiliates.
+ * All Rights Reserved.
+ * This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+ * The copyright notice above does not evidence any actual or intended publication of such source code.
+ */
+
+package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStat;
 import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStatTracker;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
-import com.appdynamics.extensions.util.StringUtils;
 import com.google.common.base.Strings;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
@@ -29,14 +35,19 @@ public class MetricDataParser {
 
     private String excludeQueueRegex;
 
+    private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
-    MetricDataParser(Map<String, List<Map<String, String>>> allMetricsFromConfig, String metricPrefix, QueueGroup[] queueGroups, String excludeQueueRegex){
+
+    public MetricDataParser(Map<String, List<Map<String, String>>> allMetricsFromConfig, String metricPrefix, QueueGroup[] queueGroups, String excludeQueueRegex){
         this.allMetricsFromConfig = allMetricsFromConfig;
         this.metricPrefix = metricPrefix;
         this.queueGroups = queueGroups;
         this.excludeQueueRegex = excludeQueueRegex;
     }
 
+    public Map<String, List<Map<String, String>>> getAllMetricsFromConfig() {
+        return allMetricsFromConfig;
+    }
 
     protected List<Metric> process(ArrayNode nodes, ArrayNode channels, ArrayNode queues) {
 
@@ -61,7 +72,7 @@ public class MetricDataParser {
 
         if (nodes != null) {
             for (JsonNode node : nodes) {
-                String name = getStringValue("name", node);
+                String name = util.getStringValue("name", node);
                 if (name != null) {
                     List<JsonNode> nodeChannels = getChannels(channels, name);
                     List<JsonNode> nodeQueues = getQueues(queues, name);
@@ -69,7 +80,7 @@ public class MetricDataParser {
 
                     for(Map<String, String> nodeData : nodeDataList){
 
-                        BigInteger metricValue = getMetricValue(nodeData, node);
+                        BigInteger metricValue = util.getMetricValue(nodeData, node);
 
                         if(metricValue!=null) {
                             Metric metric = new Metric(nodeData.get("prefix"), String.valueOf(metricValue), metricPrefix + prefix + "|" + nodeData.get("prefix"), nodeData);
@@ -105,15 +116,14 @@ public class MetricDataParser {
 
         if (queues != null) {
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
-            //Map<String, String> metricTypeMap = new HashMap<String, String>();
 
             GroupStatTracker tracker = new GroupStatTracker(queueGroups);
             for (JsonNode queue : queues) {
 
                 //Rabbit MQ queue names are case sensitive,
                 // however the controller bombs when there are 2 metrics with same name in different cases.
-                String qName = lower(getStringValue("name", queue, "Default"));
-                String vHost = getStringValue("vhost", queue, "Default");
+                String qName = util.lower(util.getStringValue("name", queue, "Default"));
+                String vHost = util.getStringValue("vhost", queue, "Default");
                 if (vHost.equals("/")) {
                     vHost = "Default";
                 }
@@ -135,7 +145,7 @@ public class MetricDataParser {
                 BigInteger consumers = new BigInteger("0");
                 for(Map<String, String> prop : queueGroupPropsList){
                     logger.debug("Queue data with metric name: " + prop.get("name"));
-                    consumers = getMetricValue(prop, queue);
+                    consumers = util.getMetricValue(prop, queue);
                     if (showIndividualStats) {
                         Metric metric = new Metric(prop.get("name"), String.valueOf(consumers), metricPrefix + prefix + prop.get("name"), prop);
                         metrics.add(metric);
@@ -150,7 +160,7 @@ public class MetricDataParser {
                 List<Map<String, String>> queueMessagePropsList= allMetricsFromConfig.get("queueMessageProps");
 
                 for (Map<String, String> prop : queueMessagePropsList) {
-                    BigInteger value = getMetricValue(prop, queue);
+                    BigInteger value = util.getMetricValue(prop, queue);
                     String metricName = prop.get("alias");
                     if (showIndividualStats) {
                         Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix + metricName, prop);
@@ -160,14 +170,13 @@ public class MetricDataParser {
                     groupStat.add(groupPrefix + prop.get("name"), consumers);
                     groupStat.setMetricPropertiesMap(prop);
                     addToMap(valueMap, prop.get("name"), value);
-                    //metricTypeMap.put(prop.get("name"),prop.get("metricType"));
                 }
 
                 String replicationPrefix = prefix + "|Replication|";
 
                 List<Map<String, String>> queueReplicationCountsPropsList= allMetricsFromConfig.get("queueReplicationCountsProps");
                 for (Map<String, String> prop : queueReplicationCountsPropsList) {
-                    BigInteger value = getChildrenCount(prop.get("name"), queue, 0);
+                    BigInteger value = util.getChildrenCount(prop.get("name"), queue, 0);
                     String metricName = prop.get("alias");
                     if (showIndividualStats) {
                         Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + replicationPrefix + metricName, prop);
@@ -179,7 +188,7 @@ public class MetricDataParser {
 
 
                 for (Map<String, String> prop : queueMessageStatsPropsList) {
-                    BigInteger value = getMetricValue(prop, queue.get("message_stats"));
+                    BigInteger value = util.getMetricValue(prop, queue.get("message_stats"));
                     String metricName = prop.get("alias");
                     if (showIndividualStats) {
                         Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + msgPrefix + metricName, prop);
@@ -188,14 +197,12 @@ public class MetricDataParser {
                     groupStat.add(grpMsgPrefix + prop.get("name"), consumers);
                     groupStat.setMetricPropertiesMap(prop);
                     addToMap(valueMap, prop.get("name"), value);
-                    //metricTypeMap.put(prop.get("name"),prop.get("metricType"));
                 }
             }
             //Aggregate the above data for Summary|Messages
             String summaryPrefix = "Summary|Messages|";
 
             List<Map<String, String>> queueSummaryPropsList= allMetricsFromConfig.get("queueSummaryProps");
-
 
             for (Map<String, String> prop : queueSummaryPropsList) {
                 BigInteger value = valueMap.get(prop.get("name"));
@@ -230,9 +237,9 @@ public class MetricDataParser {
         String prefix = "Federations|";
         if (federationLinks != null) {
             for (JsonNode federationLink : federationLinks) {
-                final String exchangeName = getStringValue("exchange", federationLink);
-                final String upstreamName = getStringValue("upstream", federationLink);
-                final String status = getStringValue("status", federationLink);
+                final String exchangeName = util.getStringValue("exchange", federationLink);
+                final String upstreamName = util.getStringValue("upstream", federationLink);
+                final String status = util.getStringValue("status", federationLink);
                 Metric metric = new Metric(exchangeName + "|" + upstreamName, String.valueOf(status.equals("running") ? 1 : 0), metricPrefix + prefix + exchangeName + "|" + upstreamName + "|running");
                 metrics.add(metric);
             }
@@ -274,7 +281,7 @@ public class MetricDataParser {
                     metrics.add(metric);
                     int runningCount = 0;
                     for (JsonNode node : nodes) {
-                        Boolean running = getBooleanValue("running", node);
+                        Boolean running = util.getBooleanValue("running", node);
                         if (running != null && running) {
                             runningCount++;
                         }
@@ -322,15 +329,6 @@ public class MetricDataParser {
     }
 
 
-    private BigInteger getNumericValueForBoolean(String key, JsonNode node, int defaultValue) {
-        final Boolean booleanValue = getBooleanValue(key, node);
-        if (booleanValue == null) {
-            return BigInteger.valueOf(defaultValue);
-        } else {
-            return booleanValue ? BigInteger.ONE : BigInteger.ZERO;
-        }
-    }
-
     /**
      * Total Consumers for the Server = Sum of all consumers of all Queues
      *
@@ -341,7 +339,7 @@ public class MetricDataParser {
         BigInteger count = new BigInteger("0");
         if (queues != null) {
             for (JsonNode queue : queues) {
-                BigInteger value = getBigIntegerValue("consumers", queue, 0);
+                BigInteger value = util.getBigIntegerValue("consumers", queue, 0);
                 count = count.add(value);
             }
         }
@@ -373,7 +371,7 @@ public class MetricDataParser {
         for (JsonNode queue : nodeQueues) {
             List<Map<String, String>> queueNodePropsList= allMetricsFromConfig.get(configName);
             for (Map<String, String> prop : queueNodePropsList) {
-                BigInteger value = getMetricValue(prop, queue);
+                BigInteger value = util.getMetricValue(prop, queue);
                 if(value!=null) {
                     Metric metric = new Metric(prop.get("name"), String.valueOf(value), metricPrefix  + "|" + prop.get("alias"), prop);
                     metrics.add(metric);
@@ -399,7 +397,7 @@ public class MetricDataParser {
 
             for (Map<String, String> prop : channelNodeMsgPropsList) {
                 if (msgStats != null) {
-                    BigInteger statVal = getMetricValue(prop, channel);
+                    BigInteger statVal = util.getMetricValue(prop, channel);
                     if(statVal!=null) {
                         metrics.add(new Metric(prop.get("name"), String.valueOf(statVal), metricPrefix + "|" + prop.get("alias"), prop));
                     }
@@ -437,7 +435,7 @@ public class MetricDataParser {
     private BigInteger getBlockedChannelCount(List<JsonNode> nodeChannels) {
         int blocked = 0;
         for (JsonNode nodeChannel : nodeChannels) {
-            Boolean value = getBooleanValue("client_flow_blocked", nodeChannel);
+            Boolean value = util.getBooleanValue("client_flow_blocked", nodeChannel);
             if (value != null && value) {
                 blocked++;
             }
@@ -456,7 +454,7 @@ public class MetricDataParser {
         List<JsonNode> nodeChannels = new ArrayList<JsonNode>();
         if (channels != null && nodeName != null) {
             for (JsonNode channel : channels) {
-                if (nodeName.equalsIgnoreCase(getStringValue("node", channel))) {
+                if (nodeName.equalsIgnoreCase(util.getStringValue("node", channel))) {
                     nodeChannels.add(channel);
                 }
             }
@@ -475,7 +473,7 @@ public class MetricDataParser {
         List<JsonNode> nodeQueues = new ArrayList<JsonNode>();
         if (queues != null && nodeName != null) {
             for (JsonNode queue : queues) {
-                if (nodeName.equalsIgnoreCase(getStringValue("node", queue))) {
+                if (nodeName.equalsIgnoreCase(util.getStringValue("node", queue))) {
                     nodeQueues.add(queue);
                 }
             }
@@ -483,84 +481,5 @@ public class MetricDataParser {
         return nodeQueues;
     }
 
-    private String getStringValue(String propName, JsonNode node) {
-        JsonNode jsonNode = node.get(propName);
-        if (jsonNode != null) {
-            return jsonNode.getTextValue();
-        }
-        return null;
-    }
 
-    private String getStringValue(String propName, JsonNode node, String defaultVal) {
-        String value = getStringValue(propName, node);
-        return value != null ? value : defaultVal;
-    }
-
-    private Boolean getBooleanValue(String propName, JsonNode node) {
-        JsonNode jsonNode = node.get(propName);
-        if (jsonNode != null) {
-            return jsonNode.getBooleanValue();
-        }
-        return null;
-    }
-
-    private BigInteger getBigIntegerValue(String propName, JsonNode node) {
-        if (node != null) {
-            JsonNode jsonNode = node.get(propName);
-            if (jsonNode != null) {
-                try {
-                    return jsonNode.getBigIntegerValue();
-                } catch (Exception e) {
-                    logger.warn("Cannot get the int value of the property "
-                            + propName + " value is " + jsonNode.getTextValue());
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Calculates metric Value for given data
-     * @param dataMap
-     * @param node
-     * @return
-     */
-    private BigInteger getMetricValue(Map<String, String> dataMap, JsonNode node){
-
-        BigInteger metricValue;
-        if(Boolean.valueOf(dataMap.get("isBoolean"))){
-            metricValue = getNumericValueForBoolean(dataMap.get("name"), node, -1);
-        }else{
-            metricValue = getBigIntegerValue(dataMap.get("name"), node, 0);
-        }
-
-        if(StringUtils.hasText(dataMap.get("divisor"))){
-            BigInteger data = getBigIntegerValue(dataMap.get("name"), node, 0);
-           // metricValue = applyDivisor(new BigDecimal(data), dataMap.get("divisor"));
-        }
-        return metricValue;
-    }
-
-    private BigInteger getChildrenCount(String prop, JsonNode node, int defaultValue) {
-        if (node != null) {
-            final JsonNode metricNode = node.get(prop);
-            if (metricNode != null && metricNode instanceof ArrayNode) {
-                final ArrayNode arrayOfChildren = (ArrayNode) metricNode;
-                return BigInteger.valueOf(arrayOfChildren.size());
-            }
-        }
-        return BigInteger.valueOf(defaultValue);
-    }
-
-    private BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
-        BigInteger value = getBigIntegerValue(propName, node);
-        return value != null ? value : new BigInteger(String.valueOf(defaultVal));
-    }
-
-    private String lower(String value) {
-        if (value != null) {
-            return value.toLowerCase();
-        }
-        return value;
-    }
 }

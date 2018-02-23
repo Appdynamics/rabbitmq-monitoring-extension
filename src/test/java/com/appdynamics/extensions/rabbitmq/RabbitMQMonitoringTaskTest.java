@@ -1,3 +1,10 @@
+/*
+ * Copyright 2018. AppDynamics LLC and its affiliates.
+ * All Rights Reserved.
+ * This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+ * The copyright notice above does not evidence any actual or intended publication of such source code.
+ */
+
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.MetricWriteHelper;
@@ -36,7 +43,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
-
+@Ignore
 @RunWith(MockitoJUnitRunner.class)
 public class RabbitMQMonitoringTaskTest {
 
@@ -136,6 +143,7 @@ public class RabbitMQMonitoringTaskTest {
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
+        initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
 
@@ -181,6 +189,7 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap = new HashMap<String, String>();
         initExpectedNodeMetrics();
         initExpectedSummaryMetrics();
+        initExpectedGroupMetrics();
         initExpectedQueueMetrics();
         initExpectedFederationMetrics();
         initExpectedClusterMetrics();
@@ -199,7 +208,7 @@ public class RabbitMQMonitoringTaskTest {
     private void initExpectedClusterMetrics(){
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published","31");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published Delta","0");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","29");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","29");
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total)","32");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total) Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Messages","13");
@@ -245,7 +254,7 @@ public class RabbitMQMonitoringTaskTest {
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got", "6");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Got Delta", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12  ");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Published Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
@@ -326,7 +335,7 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack", "2");
         //expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged Delta", "0");
+        //expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged Delta", "0");*/
     }
 
     private void initExpectedNodeMetrics() {
@@ -366,7 +375,7 @@ public class RabbitMQMonitoringTaskTest {
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers", "0");
         //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers Delta", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
 

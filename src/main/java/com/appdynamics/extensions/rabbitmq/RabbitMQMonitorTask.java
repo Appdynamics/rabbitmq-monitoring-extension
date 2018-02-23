@@ -1,3 +1,10 @@
+/*
+ * Copyright 2018. AppDynamics LLC and its affiliates.
+ * All Rights Reserved.
+ * This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+ * The copyright notice above does not evidence any actual or intended publication of such source code.
+ */
+
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.AMonitorTaskRunnable;
@@ -9,6 +16,9 @@ import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
+import com.appdynamics.extensions.rabbitmq.metrics.FederationMetricsCollector;
+import com.appdynamics.extensions.rabbitmq.metrics.MetricDataParser;
+import com.appdynamics.extensions.rabbitmq.metrics.MetricsCollector;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.google.common.collect.Lists;
 import org.apache.http.client.methods.HttpGet;
@@ -96,35 +106,18 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
     public void run() {
         try {
 
-            MetricDataParser dataParser = new MetricDataParser(allMetricsFromConfig, metricPrefix, queueGroups, excludeQueueRegex);
+            MetricDataParser dataParser = new MetricDataParser(allMetricsFromConfig, metricPrefix + " | ", queueGroups, excludeQueueRegex);
 
-            String nodeUrl = UrlBuilder.builder(getUrlParametersMap(instanceInfo)).path("/api/nodes").build();
-            ArrayNode nodes = getJson(this.configuration.getHttpClient(), nodeUrl);
+            MetricsCollector metricsCollectorTask = new MetricsCollector(configuration, instanceInfo, metricWriter,metrics,
+                                                                            metricsFromConfig, endpointFlagsMap.get("overview"), dataParser);
 
-            String channelUrl = UrlBuilder.builder(getUrlParametersMap(instanceInfo)).path("/api/channels").build();
-            ArrayNode channels = getJson(this.configuration.getHttpClient(), channelUrl);
-
-            String apiUrl = UrlBuilder.builder(getUrlParametersMap(instanceInfo)).path("/api/queues").build();
-            ArrayNode queues = getJson(this.configuration.getHttpClient(), apiUrl);
-
-            populateMetricsMap();
-            metrics.addAll(dataParser.process(nodes, channels, queues));
+            configuration.getExecutorService().execute("MetricCollectorTask",metricsCollectorTask);
 
             if(endpointFlagsMap.get("federationPlugin").equalsIgnoreCase("true")) {
-                String federationLinkUrl = UrlBuilder.builder(getUrlParametersMap(instanceInfo)).path("/api/federation-links").build();
-                ArrayNode federationLinks = getOptionalJson(this.configuration.getHttpClient(), federationLinkUrl, ArrayNode.class);
-                metrics.addAll(dataParser.parseFederationData(federationLinks));
 
-            }
-            if(endpointFlagsMap.get("overview").equalsIgnoreCase("true")) {
-                String overviewUrl = UrlBuilder.builder(getUrlParametersMap(instanceInfo)).path("/api/overview").build();
-                JsonNode overview = getOptionalJson(this.configuration.getHttpClient(), overviewUrl, JsonNode.class);
-                metrics.addAll(dataParser.parseOverviewData(overview, nodes));
-            }
+                FederationMetricsCollector fedMetricCollectorTask = new FederationMetricsCollector(configuration, instanceInfo, metricWriter, metrics, dataParser);
+                configuration.getExecutorService().execute("FederationMetricsCollector",fedMetricCollectorTask);
 
-            if (metrics != null && metrics.size() > 0) {
-                logger.debug("Printing rabbitmq metrics list of size " + metrics.size());
-                metricWriter.transformAndPrintMetrics(metrics);
             }
 
             logger.info("Completed the RabbitMQ Metric Monitoring task");
@@ -167,38 +160,6 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
         } catch (Exception ex) {
             logger.error("Error while fetching the '/api/federation-links' data, returning NULL", ex);
             return null;
-        }
-    }
-
-    private Map<String,String> getUrlParametersMap(InstanceInfo info) {
-        Map<String,String> map = new HashMap<String, String>();
-        map.put(TaskInputArgs.HOST, info.getHost());
-        map.put(TaskInputArgs.PORT, info.getPort().toString());
-        map.put(TaskInputArgs.USER, info.getUsername());
-        map.put(TaskInputArgs.PASSWORD, info.getPassword());
-        map.put(TaskInputArgs.USE_SSL, info.getUseSSL().toString());
-        checkForEnvironmentsOverride(map,info.getDisplayName());
-        return map;
-
-    }
-
-    private void populateMetricsMap(){
-            for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
-            allMetricsFromConfig.putAll(metricsConfigEntry);
-        }
-    }
-
-    private void checkForEnvironmentsOverride(Map<String, String> map, String displayName) {
-        String[] keys = new String[]{
-                TaskInputArgs.HOST,
-                TaskInputArgs.PORT,
-                TaskInputArgs.USER,
-                TaskInputArgs.PASSWORD,
-                TaskInputArgs.USE_SSL
-        };
-        for (String key:keys) {
-            map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase(), map.get(key)));
-            map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase() + "_" + displayName, map.get(key)));
         }
     }
 
