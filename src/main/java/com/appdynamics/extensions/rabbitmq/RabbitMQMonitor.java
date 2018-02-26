@@ -105,7 +105,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                     info.setConnectTimeout(10000);
                 }
                 if(instance.get("socketTimeout")!=null){
-                    info.setSocketTimeout((Integer) instance.get("connectTimeout"));
+                    info.setSocketTimeout((Integer) instance.get("socketTimeout"));
                 }
                 else{
                     info.setSocketTimeout(10000);
