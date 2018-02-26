@@ -24,13 +24,6 @@ excludeQueueRegex: ^[0-9]*
 
 encryptionKey: "myKey"
 
-endPoints:
-   nodes: "/api/nodes"
-   queues: "/api/queues"
-   channels: "/api/channels"
-   federation: "/api/federation-links"
-   overview: "/api/overview"
-
 endpointFlags:
   federationPlugin: "false"
   overview: "true"
@@ -49,25 +42,6 @@ servers:
 
 # number of concurrent tasks
 numberOfThreads: 5
-
-#dictionary:
-#  ack: "Acknowledged"
-#  deliver: "Delivered"
-#  deliver_get: "Delivered (Total)"
-#  deliver_no_ack: "Delivered No-Ack"
-#  get: "Got"
-#  get_no_ack: "Got No-Ack"
-#  publish: "Published"
-#  redeliver: "Redelivered"
-#  messages_ready: "Available"
-#  messages_unacknowledged: "Pending Acknowledgements"
-#  consumers: "Count"
-#  active_consumers: "Active"
-#  idle_consumers: "Idle"
-#  slave_nodes: "Slaves Count"
-#  synchronised_slave_nodes: "Synchronized Slaves Count"
-#  down_slave_nodes: "Down Slaves Count"
-#  messages: "Messages"
 
 metrics:
      #Items in Nodes|<node>|Messages - data looked up from /api/channels

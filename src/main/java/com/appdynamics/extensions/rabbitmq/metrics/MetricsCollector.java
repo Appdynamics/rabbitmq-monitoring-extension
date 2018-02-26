@@ -40,8 +40,12 @@ public class MetricsCollector implements Runnable {
 
     private MetricDataParser dataParser;
 
+    public void setMetricsCollectorUtil(MetricsCollectorUtil metricsCollectorUtil) {
+        this.metricsCollectorUtil = metricsCollectorUtil;
+    }
+
     public MetricsCollector(MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
-                                List<Metric> metrics, List<Map<String, List<Map<String, String>>>> metricsFromConfig, String overviewMetricFlag, MetricDataParser dataParser)
+                            List<Metric> metrics, List<Map<String, List<Map<String, String>>>> metricsFromConfig, String overviewMetricFlag, MetricDataParser dataParser)
     {
         this.configuration = configuration;
         this.instanceInfo = instanceInfo;
@@ -51,6 +55,7 @@ public class MetricsCollector implements Runnable {
         this.overviewMetricFlag = overviewMetricFlag;
         this.dataParser = dataParser;
     }
+
 
     public void run() {
 

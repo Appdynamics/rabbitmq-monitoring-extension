@@ -34,6 +34,10 @@ public class FederationMetricsCollector implements Runnable {
 
     private MetricDataParser dataParser;
 
+    public void setMetricsCollectorUtil(MetricsCollectorUtil metricsCollectorUtil) {
+        this.metricsCollectorUtil = metricsCollectorUtil;
+    }
+
     public FederationMetricsCollector(MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, List<Metric> metrics, MetricDataParser dataParser){
 
         this.configuration = configuration;

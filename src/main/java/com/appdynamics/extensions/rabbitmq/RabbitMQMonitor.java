@@ -17,18 +17,10 @@ import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.AssertUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
 import org.slf4j.LoggerFactory;
 
-import java.io.OutputStreamWriter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class RabbitMQMonitor extends ABaseMonitor {
 
@@ -166,35 +158,4 @@ public class RabbitMQMonitor extends ABaseMonitor {
         return instances.size();
     }
 
-
-/*
-    public static void main(String [] args){
-
-        ConsoleAppender ca = new ConsoleAppender();
-        ca.setWriter(new OutputStreamWriter(System.out));
-        ca.setLayout(new PatternLayout("%-5p [%t]: %m%n"));
-        ca.setThreshold(Level.DEBUG);
-
-        org.apache.log4j.Logger.getRootLogger().addAppender(ca);
-
-        final RabbitMQMonitor monitor = new RabbitMQMonitor();
-
-        final Map<String, String> taskArgs = new HashMap<String, String>();
-        taskArgs.put("config-file", "/Users/akshay.srivastava/AppDynamics/extensions/rabbitmq-monitoring-extension/src/main/resources/config/config.yml");
-
-
-        //monitor.execute(taskArgs, null);
-
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(new Runnable() {
-            public void run() {
-                try {
-                    monitor.execute(taskArgs, null);
-                } catch (Exception e) {
-                    logger.error("Error while running the task", e);
-                }
-            }
-        }, 2, 30, TimeUnit.SECONDS);
-    }
-*/
 }

@@ -43,25 +43,6 @@ endpointFlags:
   federationPlugin: "true"
   overview: "true"
 
-dictionary:
-  #ack: "Acknowledged"
-  #deliver: "Delivered"
-  #deliver_get: "Delivered (Total)"
-  #deliver_no_ack: "Delivered No-Ack"
-  #get: "Got"
-  #get_no_ack: "Got No-Ack"
-  #publish: "Published"
-  #redeliver: "Redelivered"
-  #messages_ready: "Available"
-  #messages_unacknowledged: "Pending Acknowledgements"
-  #consumers: "Count"
-  #active_consumers: "Active"
-  #idle_consumers: "Idle"
-  #slave_nodes: "Slaves Count"
-  #synchronised_slave_nodes: "Synchronized Slaves Count"
-  #down_slave_nodes: "Down Slaves Count"
-  #messages: "Messages"
-
 #                                      List of metrics
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Glossary of terms(These terms are used as properties for each metric):

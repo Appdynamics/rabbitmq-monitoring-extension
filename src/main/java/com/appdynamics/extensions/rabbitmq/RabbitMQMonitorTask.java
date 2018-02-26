@@ -9,10 +9,8 @@ package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
-import com.appdynamics.extensions.TaskInputArgs;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
-import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
@@ -24,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.LoggerFactory;
@@ -62,29 +59,8 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
     private Map<String, List<Map<String, String>>> allMetricsFromConfig;
 
-    public void setAllMetricsFromConfig(Map<String, List<Map<String, String>>> allMetricsFromConfig) {
-        this.allMetricsFromConfig = allMetricsFromConfig;
-    }
-
-    public void setMetricsFromConfig(List<Map<String, List<Map<String, String>>>> metricsFromConfig) {
-        this.metricsFromConfig = metricsFromConfig;
-    }
-
-    public void setQueueGroups(QueueGroup[] queueGroups) {
-        this.queueGroups = queueGroups;
-    }
-
-    public void setMetricPrefix(String metricPrefix) {
-        this.metricPrefix = metricPrefix;
-    }
-
-
     public void setMetrics(List<Metric> metrics) {
         this.metrics = metrics;
-    }
-
-    public void setEndpointFlagsMap(Map<String, String> endpointFlagsMap) {
-        this.endpointFlagsMap = endpointFlagsMap;
     }
 
 

@@ -53,7 +53,7 @@ public class MetricsCollectorUtil {
         }
     }
 
-    protected ArrayNode getJson(CloseableHttpClient client, String url) {
+    public ArrayNode getJson(CloseableHttpClient client, String url) {
         HttpGet get = new HttpGet(url);
         ObjectMapper mapper = new ObjectMapper();
         ArrayNode json = null;
@@ -68,7 +68,7 @@ public class MetricsCollectorUtil {
         return json;
     }
 
-    protected  <T> T getOptionalJson(CloseableHttpClient client, String url, Class<T> clazz) {
+    public  <T> T getOptionalJson(CloseableHttpClient client, String url, Class<T> clazz) {
         try {
             HttpGet get = new HttpGet(url);
             ObjectMapper mapper = new ObjectMapper();
@@ -83,7 +83,7 @@ public class MetricsCollectorUtil {
         }
     }
 
-    protected void populateMetricsMap(Map<String, List<Map<String, String>>> allMetricsFromConfig, List<Map<String, List<Map<String, String>>>> metricsFromConfig){
+    public void populateMetricsMap(Map<String, List<Map<String, String>>> allMetricsFromConfig, List<Map<String, List<Map<String, String>>>> metricsFromConfig){
         for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
             allMetricsFromConfig.putAll(metricsConfigEntry);
         }

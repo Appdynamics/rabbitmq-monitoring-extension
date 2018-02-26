@@ -88,8 +88,6 @@ public class MetricDataParser {
                         }
                     }
 
-                    metrics.add(new Metric(prefix, String.valueOf(getBlockedChannelCount(nodeChannels)), metricPrefix + prefix + "|Channels|Blocked"));
-
                     //Nodes|$node|Messages
                     metrics.addAll(addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels));
                     //Nodes|$node|Messages
@@ -403,6 +401,7 @@ public class MetricDataParser {
                     }
                 }
             }
+
         }
         return metrics;
     }

@@ -5,7 +5,7 @@
  * The copyright notice above does not evidence any actual or intended publication of such source code.
  */
 
-package com.appdynamics.extensions.rabbitmq;
+package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
@@ -24,7 +24,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -43,9 +42,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
-@Ignore
 @RunWith(MockitoJUnitRunner.class)
-public class RabbitMQMonitoringTaskTest {
+public class MetricsCollectorTest {
 
 
     @Mock
@@ -58,15 +56,22 @@ public class RabbitMQMonitoringTaskTest {
     @Mock
     private MetricWriteHelper metricWriter;
 
+    @Mock
+    private MetricDataParser dataParser;
 
+    @Mock
+    private MetricsCollectorUtil metricsCollectorUtil;
 
-    private RabbitMQMonitorTask task;
-    public static final Logger logger = Logger.getLogger(RabbitMQMonitoringTaskTest.class);
+    private MetricsCollector metricsCollectorTask;
+
+    public static final Logger logger = Logger.getLogger(MetricsCollectorTest.class);
+
     private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));;
 
     private Map<String, String> expectedValueMap = new HashMap<String, String>();
     private Map<String, List<Map<String, String>>> allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
-    private Map<String, String> endpointsFlag = new HashMap<String, String>();
+    private List<Map<String, List<Map<String, String>>>> metricsFromConfig = (List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("com/appdynamics/extensions/rabbitmq/metrics");
+    private Map<String, String> endpointsFlag = (Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags");
     private List<Metric> metrics = new ArrayList<Metric>();
 
 
@@ -76,7 +81,19 @@ public class RabbitMQMonitoringTaskTest {
         Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
         Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
 
-        task = Mockito.spy(new RabbitMQMonitorTask(serviceProvider, instances.getInstances()[0], instances));
+        metricsFromConfig = ((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
+
+        for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
+            allMetricsFromConfig.putAll(metricsConfigEntry);
+        }
+
+        dataParser = Mockito.spy(new MetricDataParser(allMetricsFromConfig, "", instances.getQueueGroups(), instances.getExcludeQueueRegex()));
+
+        metricsCollectorTask = Mockito.spy(new MetricsCollector(monitorConfiguration, instances.getInstances()[0], metricWriter,metrics,
+                metricsFromConfig, "true", dataParser));
+        metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
+
+
 
         doAnswer(new Answer(){
 
@@ -113,7 +130,7 @@ public class RabbitMQMonitoringTaskTest {
                 logger.info("Returning the mocked data for the api " + file);
                 return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
             }
-        }).when(task).getJson(any(CloseableHttpClient.class), anyString());
+        }).when(metricsCollectorUtil).getJson(any(CloseableHttpClient.class), anyString());
 
         doAnswer(new Answer() {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -131,8 +148,7 @@ public class RabbitMQMonitoringTaskTest {
                 return null;
 
             }
-        }).when(task).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
-
+        }).when(metricsCollectorUtil).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
 
     }
 
@@ -144,18 +160,10 @@ public class RabbitMQMonitoringTaskTest {
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedQueueMetrics();
-        initExpectedFederationMetrics();
         initExpectedClusterMetrics();
 
-        task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
-        task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
-        task.setQueueGroups(instances.getQueueGroups());
-        task.setMetricPrefix("");
-        task.setMetrics(metrics);
-
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
-        task.run();
+        metricsCollectorTask.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -168,18 +176,11 @@ public class RabbitMQMonitoringTaskTest {
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedQueueMetrics();
-        initExpectedFederationMetrics();
         initExpectedClusterMetrics();
         instances.getQueueGroups()[0].setShowIndividualStats(true);
 
-        task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
-        task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
-        task.setQueueGroups(instances.getQueueGroups());
-        task.setMetricPrefix("");
-        task.setMetrics(metrics);
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
-        task.run();
+        metricsCollectorTask.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -191,16 +192,10 @@ public class RabbitMQMonitoringTaskTest {
         initExpectedSummaryMetrics();
         initExpectedGroupMetrics();
         initExpectedQueueMetrics();
-        initExpectedFederationMetrics();
         initExpectedClusterMetrics();
 
-        task.setMetricsFromConfig((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
-        task.setAllMetricsFromConfig(allMetricsFromConfig);
-        task.setEndpointFlagsMap((Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags"));
-        task.setMetricPrefix("");
-        task.setMetrics(metrics);
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
-        task.run();
+        metricsCollectorTask.run();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -233,11 +228,6 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap.put("Availability","1");
     }
 
-    private void initExpectedFederationMetrics() {
-        expectedValueMap.put("Federations|myexch1|myexch1_upstream_0|running", "0");
-        expectedValueMap.put("Federations|myexch1|myexch1_upstream_1|running", "1");
-    }
-
     private void initExpectedQueueMetrics() {
         expectedValueMap.put("Queues|Default|node1q1consumers", "1");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "36");
@@ -260,17 +250,14 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count Delta", "0");
-        /*expectedValueMap.put("Summary|Messages|Available", "37");
+        expectedValueMap.put("Summary|Messages|Available", "37");
         expectedValueMap.put("Summary|Messages|Delivered (Total)", "23");
         expectedValueMap.put("Summary|Messages|Published", "34");
         expectedValueMap.put("Summary|Messages|Redelivered", "28");
         expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "52");
-        expectedValueMap.put("Summary|Queues", "2");*/
+        expectedValueMap.put("Summary|Queues", "2");
 
 
 
@@ -295,11 +282,8 @@ public class RabbitMQMonitoringTaskTest {
         expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered", "3");
         //expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count Delta", "0");
 
     }
 
@@ -316,65 +300,37 @@ public class RabbitMQMonitoringTaskTest {
 
     private void initExpectedGroupMetrics() {
         expectedValueMap.put("Queue Groups|Default|group1|Messages|redeliver", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|redeliver Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_get", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_get Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|publish", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|publish Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_no_ack", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_no_ack Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|get", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|get Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1messages_ready", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1messages_ready Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1consumers", "2");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|ack", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|ack Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack Delta", "0");
         expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged", "2");
-        //expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged Delta", "0");*/
     }
 
     private void initExpectedNodeMetrics() {
         expectedValueMap.put("Nodes|rabbit@rabbit1|Erlang Processes", "210");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Erlang Processes Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Disk Free Alarm Activated Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB)", "127895872");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB) Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets", "3");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count", "1");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors", "26");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available", "36");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements", "50");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Count", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Count Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers", "0");
-        //expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers Delta", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
