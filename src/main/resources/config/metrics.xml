@@ -1,0 +1,116 @@
+<!--
+  ~ Copyright 2018. AppDynamics LLC and its affiliates.
+  ~ All Rights Reserved.
+  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  -->
+
+<!--
+metric-type = AggregationType.TimeRollup.ClusterRollup
+AggregationType = AVG | SUM | OBS
+TimeRollup = AVG | SUM | CUR
+ClusterRollup = IND | COL
+-->
+<stats>
+    <!-- Items in Nodes|<node> - data looked up from /api/nodes nodeDataMetric-->
+    <stat url="/api/nodes" alias="Nodes" filter-name="nodes" children="entries">
+        <naming use-entry-name="true"/>
+        <metric attr="proc_used" alias="Erlang Processes"/>
+        <metric attr="disk_free_alarm" alias="Disk Free Alarm Activateds"/>
+        <metric attr="mem_alarm" alias="Memory Free Alarm Activated"/>
+        <metric attr="fd_used" alias="File Descriptors"/>
+        <metric attr="mem_used" alias="Memory(MB)" multiplier="9.54e-7"/>
+        <metric attr="sockets_used" alias="Sockets"/>
+        <metric attr="channels_count" alias="Channels|Count"/>
+        <metric attr="channels_blocked" alias="Channels|Blocked"/>
+        <metric attr="summary_channels" alias="Summary|Channels"/>
+        <metric attr="consumers" alias="Summary|Consumers"/>
+
+        <!-- COMES FROM /API/queues Fro config.yml queueNodeMsgProps and queueNodeProps-->
+        <stat name="queueNodeData" children="entries">
+            <metric attr="messages_ready" alias="Available"/>
+            <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            <metric attr="consumers" alias="Count"/>
+        </stat>
+
+        <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats-->
+        <stat url="/api/queues" children="entries" alias="Queues" name="queueMessageStatsProps" filter-name="queues">
+            <metric attr="ack" alias="Acknowledged"/>
+            <metric attr="deliver_get" alias="Delivered (Total)" delta="true"/>
+            <metric attr="deliver" alias="Delivered" delta="true"/>
+            <metric attr="deliver_no_ack" alias="Delivered No-Ack"/>
+            <metric attr="get" alias="Got"/>
+            <metric attr="get_no_ack" alias="Got No-Ack"/>
+            <metric attr="publish" alias="Published"/>
+            <metric attr="redeliver" alias="Redelivered"/>
+
+            <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues-->
+            <stat name="queueMessageProps" children="entries" alias="Messages">
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            </stat>
+
+            <!-- Items in Queues|<host>|<QName>|Replication - data looked up from /api/queues-->
+            <stat name="queueReplicationCountsProps" children="entries" alias="Replication">
+                <metric attr="slave_nodes" alias="Slaves Count"/>
+                <metric attr="synchronised_slave_nodes" alias="Synchronised Slaves Count"/>
+                <metric attr="down_slave_nodes" alias="Down Slaves Count"/>
+            </stat>
+
+            <!-- Queue Group data, stats combined by groupName defined in queueGroups above-->
+            <stat name="queueGroupProps" children="entries">
+                <metric attr="consumers" alias="Count"/>
+            </stat>
+
+            <!-- Items in Summary|Messages - data looked up from /api/queues-->
+            <stat name="queueSummaryProps" alias="Summary">
+                <metric attr="messages_ready" alias="Available" delta="true"/>
+                <metric attr="deliver_get" alias="Delivered (Total)" delta="true"/>
+                <metric attr="publish" alias="Published" delta="true"/>
+                <metric attr="redeliver" alias="Redelivered" delta="true"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" delta="true"/>
+            </stat>
+        </stat>
+
+        <!-- Items in Nodes|<node>|Messages - data looked up from /api/channels-->
+        <stat url="/api/channels" name="channelNodeMessageProps" children="entries" alias="Channels">
+            <metric attr="ack" alias="Acknowledged" delta="true"/>
+            <metric attr="deliver" alias="Delivered"/>
+            <metric attr="deliver_no_ack" alias="Delivered No-Ack" delta="true"/>
+            <metric attr="get_no_ack" alias="Got No-Ack"/>
+            <metric attr="publish" alias="Published" delta="true"/>
+            <metric attr="redeliver" alias="Redelivered"/>
+        </stat>
+
+
+        <!-- Items in Clusters|<Cluster>|Queues - data looked up from /api/overview-->
+        <stat url="/api/overview" children="entries" alias="Clusters">
+            <stat url="queue_totals" children="entries" alias="Queues|">
+                <metric attr="messages" alias = "Messages"/>
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Messages - data looked up from /api/overview-->
+            <stat url="message_stats" children="entries" alias="Messages|">
+                <metric attr="publish" alias="Published"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="ack" alias="Acknowledged"/>
+                <metric attr="get" alias="Got"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Objects - data looked up from /api/overview-->
+            <stat url="object_totals" children="entries" alias="Objects|">
+                <metric attr="consumers" alias="Count"/>
+                <metric attr="queues"/>
+                <metric attr="exchanges"/>
+                <metric attr="connections"/>
+                <metric attr="channels"/>
+            </stat>
+        </stat>
+    </stat>
+
+    <stat url="/api/federation-links" alias="FederationLinks">
+    </stat>
+
+</stats>

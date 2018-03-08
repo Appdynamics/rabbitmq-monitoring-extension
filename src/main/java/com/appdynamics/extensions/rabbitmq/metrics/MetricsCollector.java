@@ -11,18 +11,23 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
-import org.codehaus.jackson.JsonNode;
+import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
+import static com.appdynamics.extensions.util.AssertUtils.assertNotNull;
 
 public class MetricsCollector implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MetricsCollector.class);
+
+    private Stat stat;
 
     private MonitorConfiguration configuration;
 
@@ -30,52 +35,74 @@ public class MetricsCollector implements Runnable {
 
     private MetricWriteHelper metricWriteHelper;
 
-    private List<Metric> metrics;
+    private String overviewMetricFlag;
 
-    private List<Map<String, List<Map<String, String>>>> metricsFromConfig;
+    private List<Metric> metrics = new ArrayList<Metric>();
 
     private MetricsCollectorUtil metricsCollectorUtil = new MetricsCollectorUtil();
 
-    private String overviewMetricFlag;
-
     private MetricDataParser dataParser;
+
+    private QueueGroup[] queueGroups;
+
+    private ArrayNode nodeDataJson;
 
     public void setMetricsCollectorUtil(MetricsCollectorUtil metricsCollectorUtil) {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public MetricsCollector(MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
-                            List<Metric> metrics, List<Map<String, List<Map<String, String>>>> metricsFromConfig, String overviewMetricFlag, MetricDataParser dataParser)
+    public MetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
+                             String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups)
     {
+        this.stat = stat;
         this.configuration = configuration;
         this.instanceInfo = instanceInfo;
         this.metricWriteHelper = metricWriteHelper;
-        this.metrics = metrics;
-        this.metricsFromConfig = metricsFromConfig;
         this.overviewMetricFlag = overviewMetricFlag;
         this.dataParser = dataParser;
+        this.queueGroups = queueGroups;
     }
 
 
     public void run() {
 
-        String nodeUrl = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path("/api/nodes").build();
-        ArrayNode nodes = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), nodeUrl);
+        String endpoint = stat.getUrl();
+        String label = stat.getAlias();
+        assertNotNull(label, "The label attribute cannot be empty for stat " + stat);
+        String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
+        logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
+        nodeDataJson = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
 
-        String channelUrl = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path("/api/channels").build();
-        ArrayNode channels = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), channelUrl);
+        metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson));
 
-        String apiUrl = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path("/api/queues").build();
-        ArrayNode queues = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), apiUrl);
+        for(Stat childStat: stat.getStats()){
 
-        metricsCollectorUtil.populateMetricsMap(dataParser.getAllMetricsFromConfig(), metricsFromConfig);
-        metrics.addAll(dataParser.process(nodes, channels, queues));
+            if(childStat.getUrl() != null) {
 
-        if(overviewMetricFlag.equalsIgnoreCase("true")) {
+                url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(childStat.getUrl()).build();
+                logger.info("Fetching the RabbitMQ Stats for stat child: " + childStat.getAlias() + " from the URL {}" + url );
 
-            String overviewUrl = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path("/api/overview").build();
-            JsonNode overview = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), overviewUrl, JsonNode.class);
-            metrics.addAll(dataParser.parseOverviewData(overview, nodes));
+                ArrayNode json = null;
+                if(childStat.getAlias().equalsIgnoreCase("Clusters")) {
+                    logger.debug("Overview metric flag: " + overviewMetricFlag);
+                    if( overviewMetricFlag.equalsIgnoreCase("true")) {
+                        json = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+                    }
+                }else{
+                    json = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
+                }
+
+                if(childStat.getAlias().equalsIgnoreCase("Queues")){
+                    QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
+                    metrics.addAll(queueParser.parseQueueData(json, nodeDataJson));
+                }else if(childStat.getAlias().equalsIgnoreCase("Channels")){
+                    ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
+                    metrics.addAll(channelParser.parseChannelData(json, nodeDataJson));
+                }else if(childStat.getAlias().equalsIgnoreCase("Clusters")){
+                    OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());
+                    metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson));
+                }
+            }
         }
 
         if (metrics != null && metrics.size() > 0) {
@@ -83,4 +110,5 @@ public class MetricsCollector implements Runnable {
             metricWriteHelper.transformAndPrintMetrics(metrics);
         }
     }
+
 }

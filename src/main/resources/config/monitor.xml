@@ -20,6 +20,7 @@
                 <execution-timeout-in-secs>60</execution-timeout-in-secs>
                 <task-arguments>
                         <argument name="config-file" is-required="true" default-value="monitors/RabbitMQMonitor/config.yml" />
+                        <argument name="metric-file" is-required="true" default-value="monitors/RabbitMQMonitor/metrics.xml" />
                 </task-arguments>
                 <java-task>
                         <classpath>rabbitmq-monitoring-extension.jar</classpath>

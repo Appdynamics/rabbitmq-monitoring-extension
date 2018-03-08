@@ -11,16 +11,21 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class FederationMetricsCollector implements Runnable {
+public class OptionalMetricsCollector implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(FederationMetricsCollector.class);
+    private static final Logger logger = LoggerFactory.getLogger(OptionalMetricsCollector.class);
+
+    private Stat stat;
 
     private MonitorConfiguration configuration;
 
@@ -28,7 +33,7 @@ public class FederationMetricsCollector implements Runnable {
 
     private MetricWriteHelper metricWriteHelper;
 
-    private List<Metric> metrics;
+    private List<Metric> metrics = new ArrayList<Metric>();
 
     private MetricsCollectorUtil metricsCollectorUtil = new MetricsCollectorUtil();
 
@@ -38,23 +43,31 @@ public class FederationMetricsCollector implements Runnable {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public FederationMetricsCollector(MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, List<Metric> metrics, MetricDataParser dataParser){
+    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser){
 
+        this.stat = stat;
         this.configuration = configuration;
         this.instanceInfo = instanceInfo;
         this.metricWriteHelper = metricWriteHelper;
-        this.metrics = metrics;
         this.dataParser = dataParser;
     }
 
     public void run() {
 
-        String federationLinkUrl = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path("/api/federation-links").build();
-        ArrayNode federationLinks = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), federationLinkUrl, ArrayNode.class);
-        metrics.addAll(dataParser.parseFederationData(federationLinks));
+        String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
+        logger.debug("Running Optional Metrics Collection task for url: " + url);
+
+        ArrayNode optionalJson = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+        String federationFlag = ((Map<String, String>) configuration.getConfigYml().get("endpointFlags")).get("federationPlugin");
+        if(stat.getAlias().equalsIgnoreCase("FederationLinks") && federationFlag.equalsIgnoreCase("true"))
+        {
+            metrics.addAll(dataParser.parseFederationData(optionalJson));
+        }else{
+            metrics.addAll(dataParser.parseAdditionalData(stat, optionalJson));
+        }
 
         if (metrics != null && metrics.size() > 0) {
-            logger.debug("Printing federation metrics list of size " + metrics.size());
+            logger.debug("Printing optional metrics list of size " + metrics.size());
             metricWriteHelper.transformAndPrintMetrics(metrics);
         }
     }

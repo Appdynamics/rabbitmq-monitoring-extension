@@ -10,7 +10,9 @@ package com.appdynamics.extensions.rabbitmq;
 import com.appdynamics.extensions.ABaseMonitor;
 import com.appdynamics.extensions.TaskInputArgs;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
+import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.crypto.CryptoUtil;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
@@ -38,6 +40,18 @@ public class RabbitMQMonitor extends ABaseMonitor {
     @Override
     public String getMonitorName() {
         return "RabbitMQ Monitor";
+    }
+
+    @Override
+    protected void initialize(Map<String, String> args) {
+        if (this.configuration == null) {
+            this.monitorJob = this.createMonitorJob();
+            MonitorConfiguration conf = new MonitorConfiguration(this.monitorName, this.getDefaultMetricPrefix(), this.monitorJob);
+            conf.setConfigYml((String)args.get("config-file"));
+            this.initializeMoreStuff(conf);
+            this.configuration = conf;
+            this.configuration.setMetricsXml((String)args.get("metric-file"), Stat.Stats.class);
+        }
     }
 
     private void initialiseInstances(Map<String, ?> configYml) {
@@ -82,9 +96,6 @@ public class RabbitMQMonitor extends ABaseMonitor {
                         logger.error(msg);
                         throw new IllegalArgumentException(msg);
                     }
-                }
-                else{
-                    info.setPassword("guest");
                 }
                 if(instance.get("port")!=null){
                     info.setPort((Integer) instance.get("port"));
@@ -144,6 +155,8 @@ public class RabbitMQMonitor extends ABaseMonitor {
 
         initialiseInstances(this.configuration.getConfigYml());
 
+
+        AssertUtils.assertNotNull(this.configuration.getMetricsXmlConfiguration(), "Metrics xml not available");
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
         for (InstanceInfo instanceInfo : instances.getInstances()) {
             RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances);

@@ -12,22 +12,18 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
-import com.appdynamics.extensions.rabbitmq.metrics.FederationMetricsCollector;
+import com.appdynamics.extensions.rabbitmq.metrics.OptionalMetricsCollector;
 import com.appdynamics.extensions.rabbitmq.metrics.MetricDataParser;
 import com.appdynamics.extensions.rabbitmq.metrics.MetricsCollector;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
+import com.appdynamics.extensions.util.StringUtils;
 import com.google.common.collect.Lists;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,8 +53,6 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
     private Map<String, String> endpointFlagsMap;
 
-    private Map<String, List<Map<String, String>>> allMetricsFromConfig;
-
     public void setMetrics(List<Metric> metrics) {
         this.metrics = metrics;
     }
@@ -75,25 +69,29 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
         this.displayName = instanceInfo.getDisplayName();
         this.metrics = Lists.newArrayList();
         this.queueGroups = instances.getQueueGroups();
-        allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
     }
 
 
     public void run() {
         try {
 
-            MetricDataParser dataParser = new MetricDataParser(allMetricsFromConfig, metricPrefix + " | ", queueGroups, excludeQueueRegex);
+            Stat.Stats metricConfig = (Stat.Stats) configuration.getMetricsXmlConfiguration();
 
-            MetricsCollector metricsCollectorTask = new MetricsCollector(configuration, instanceInfo, metricWriter,metrics,
-                                                                            metricsFromConfig, endpointFlagsMap.get("overview"), dataParser);
+            MetricDataParser dataParser = new MetricDataParser(metricPrefix + "|", configuration);
 
-            configuration.getExecutorService().execute("MetricCollectorTask",metricsCollectorTask);
+            for(Stat stat: metricConfig.getStats()) {
 
-            if(endpointFlagsMap.get("federationPlugin").equalsIgnoreCase("true")) {
+                if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Nodes")) {
+                    MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration, instanceInfo, metricWriter,
+                             endpointFlagsMap.get("overview"), dataParser, queueGroups);
 
-                FederationMetricsCollector fedMetricCollectorTask = new FederationMetricsCollector(configuration, instanceInfo, metricWriter, metrics, dataParser);
-                configuration.getExecutorService().execute("FederationMetricsCollector",fedMetricCollectorTask);
 
+                    configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
+                }else {
+                    logger.debug("Stat: " +stat.getAlias());
+                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser);
+                    configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
+                }
             }
 
             logger.info("Completed the RabbitMQ Metric Monitoring task");
@@ -106,37 +104,6 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
     public void onTaskComplete() {
         logger.info("All tasks for server {} finished", displayName);
-    }
-
-
-    protected ArrayNode getJson(CloseableHttpClient client, String url) {
-        HttpGet get = new HttpGet(url);
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode json = null;
-        try {
-            json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),ArrayNode.class);
-        }  catch (Exception e) {
-            logger.error("Error while fetching the " + url + " data, returning " + json, e);
-        }
-        if (logger.isDebugEnabled()) {
-            logger.debug("The url " + url + " responded with a json {}" + json);
-        }
-        return json;
-    }
-
-    protected  <T> T getOptionalJson(CloseableHttpClient client, String url, Class<T> clazz) {
-        try {
-            HttpGet get = new HttpGet(url);
-            ObjectMapper mapper = new ObjectMapper();
-            T json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),clazz);
-            if (logger.isDebugEnabled()) {
-                logger.debug("The url " + url + " responded with a json " + json);
-            }
-            return json;
-        } catch (Exception ex) {
-            logger.error("Error while fetching the '/api/federation-links' data, returning NULL", ex);
-            return null;
-        }
     }
 
 }

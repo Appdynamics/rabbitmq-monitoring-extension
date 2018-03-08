@@ -8,7 +8,10 @@
 package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.TaskInputArgs;
+import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
+import com.appdynamics.extensions.util.YmlUtils;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -60,7 +63,7 @@ public class MetricsCollectorUtil {
         try {
             json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),ArrayNode.class);
         }  catch (Exception e) {
-            logger.error("Error while fetching the " + url + " data, returning " + json, e);
+            logger.debug("Error occurred while fetching the response from " + url + " error: " + e);
         }
         if (logger.isDebugEnabled()) {
             logger.debug("The url " + url + " responded with a json {}" + json);
@@ -78,14 +81,8 @@ public class MetricsCollectorUtil {
             }
             return json;
         } catch (Exception ex) {
-            logger.error("Error while fetching the '/api/federation-links' data, returning NULL", ex);
+            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL", ex);
             return null;
-        }
-    }
-
-    public void populateMetricsMap(Map<String, List<Map<String, String>>> allMetricsFromConfig, List<Map<String, List<Map<String, String>>>> metricsFromConfig){
-        for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
-            allMetricsFromConfig.putAll(metricsConfigEntry);
         }
     }
 
@@ -125,38 +122,24 @@ public class MetricsCollectorUtil {
         return null;
     }
 
-    /**
+   /**
      * Calculates metric Value for given data
-     * @param dataMap
+     * @param value
      * @param node
      * @return
      */
-    protected BigInteger getMetricValue(Map<String, String> dataMap, JsonNode node){
+    protected BigInteger getMetricValue(String value, JsonNode node, String isBool){
 
+        logger.debug(String.format("Value: %s node: %s", value, node));
         BigInteger metricValue;
-        if(Boolean.valueOf(dataMap.get("isBoolean"))){
-            metricValue = getNumericValueForBoolean(dataMap.get("name"), node, -1);
+        if(Boolean.valueOf(isBool)){
+            metricValue = getNumericValueForBoolean(value, node, -1);
         }else{
-            metricValue = getBigIntegerValue(dataMap.get("name"), node, 0);
+            metricValue = getBigIntegerValue(value, node, 0);
         }
-
-        /*if(StringUtils.hasText(dataMap.get("divisor"))){
-            BigInteger data = getBigIntegerValue(dataMap.get("name"), node, 0);
-            metricValue = applyDivisor(new BigDecimal(data), dataMap.get("divisor"));
-        }*/
         return metricValue;
     }
 
-    protected BigInteger getChildrenCount(String prop, JsonNode node, int defaultValue) {
-        if (node != null) {
-            final JsonNode metricNode = node.get(prop);
-            if (metricNode != null && metricNode instanceof ArrayNode) {
-                final ArrayNode arrayOfChildren = (ArrayNode) metricNode;
-                return BigInteger.valueOf(arrayOfChildren.size());
-            }
-        }
-        return BigInteger.valueOf(defaultValue);
-    }
 
     protected BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
         BigInteger value = getBigIntegerValue(propName, node);
@@ -177,5 +160,60 @@ public class MetricsCollectorUtil {
         } else {
             return booleanValue ? BigInteger.ONE : BigInteger.ZERO;
         }
+    }
+
+    /**
+     * Adds the value to the Map. If the value is present it adds to the current value.
+     * The map is used to calculate the aggregate.
+     *
+     * @param valueMap
+     * @param prop
+     * @param val
+     */
+    protected void addToMap(Map<String, BigInteger> valueMap, String prop, BigInteger val) {
+        if (val != null) {
+            BigInteger curr = valueMap.get(prop);
+            if (curr == null) {
+                valueMap.put(prop, val);
+            } else {
+                valueMap.put(prop, curr.add(val));
+            }
+        }
+    }
+
+    protected boolean isIncluded(MonitorConfiguration config, String entityName, Stat stat) {
+
+            Map filter = getFilter(config, stat);
+            if (isIncluded(filter, entityName)) {
+                return true;
+            } else {
+                logger.debug("The filter {} didnt match for entityName {} and url {}"
+                        , filter, entityName, stat.getUrl());
+                return false;
+            }
+
+    }
+
+    private Map getFilter(MonitorConfiguration config, Stat stat) {
+
+        Map filter = (Map) YmlUtils.getNestedObject(config.getConfigYml(), "filter", stat.getFilterName());
+        return filter;
+    }
+
+    //Apply the filter
+    private boolean isIncluded(Map filter, String entityName) {
+        if (filter != null) {
+            List<String> includes = (List) filter.get("includes");
+            logger.debug("For the entity name [{}], the includes filter is {}", entityName, includes);
+            if (includes != null) {
+                for (String include : includes) {
+                    boolean matches = entityName.matches(include);
+                    if (matches) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
