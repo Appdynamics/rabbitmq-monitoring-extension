@@ -14,6 +14,7 @@ import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.appdynamics.extensions.util.AssertUtils.assertNotNull;
 
 public class MetricsCollector implements Runnable {
 
@@ -47,6 +47,10 @@ public class MetricsCollector implements Runnable {
 
     private ArrayNode nodeDataJson;
 
+    public List<Metric> getMetrics() {
+        return metrics;
+    }
+
     public void setMetricsCollectorUtil(MetricsCollectorUtil metricsCollectorUtil) {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
@@ -67,22 +71,18 @@ public class MetricsCollector implements Runnable {
     public void run() {
 
         String endpoint = stat.getUrl();
-        String label = stat.getAlias();
-        assertNotNull(label, "The label attribute cannot be empty for stat " + stat);
         String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
         logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
         nodeDataJson = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
-
         metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson));
 
         for(Stat childStat: stat.getStats()){
-
             if(childStat.getUrl() != null) {
 
                 url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(childStat.getUrl()).build();
                 logger.info("Fetching the RabbitMQ Stats for stat child: " + childStat.getAlias() + " from the URL {}" + url );
 
-                ArrayNode json = null;
+                JsonNode json = null;
                 if(childStat.getAlias().equalsIgnoreCase("Clusters")) {
                     logger.debug("Overview metric flag: " + overviewMetricFlag);
                     if( overviewMetricFlag.equalsIgnoreCase("true")) {
@@ -94,10 +94,10 @@ public class MetricsCollector implements Runnable {
 
                 if(childStat.getAlias().equalsIgnoreCase("Queues")){
                     QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
-                    metrics.addAll(queueParser.parseQueueData(json, nodeDataJson));
+                    metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson));
                 }else if(childStat.getAlias().equalsIgnoreCase("Channels")){
                     ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
-                    metrics.addAll(channelParser.parseChannelData(json, nodeDataJson));
+                    metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson));
                 }else if(childStat.getAlias().equalsIgnoreCase("Clusters")){
                     OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());
                     metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson));

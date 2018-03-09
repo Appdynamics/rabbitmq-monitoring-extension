@@ -45,10 +45,6 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
     private String metricPrefix;
 
-    private String excludeQueueRegex;
-
-    private List<Map<String, List<Map<String, String>>>> metricsFromConfig;
-
     private List<Metric> metrics;
 
     private Map<String, String> endpointFlagsMap;
@@ -63,8 +59,6 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
         this.instanceInfo = instanceInfo;
         this.metricWriter = serviceProvider.getMetricWriteHelper();
         this.metricPrefix = configuration.getMetricPrefix();
-        this.excludeQueueRegex = instances.getExcludeQueueRegex();
-        this.metricsFromConfig = (List<Map<String, List<Map<String, String>>>>) configuration.getConfigYml().get("metrics");
         this.endpointFlagsMap = (Map<String, String>) configuration.getConfigYml().get("endpointFlags");
         this.displayName = instanceInfo.getDisplayName();
         this.metrics = Lists.newArrayList();
@@ -89,7 +83,7 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
                     configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
                 }else {
                     logger.debug("Stat: " +stat.getAlias());
-                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser);
+                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"));
                     configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
                 }
             }

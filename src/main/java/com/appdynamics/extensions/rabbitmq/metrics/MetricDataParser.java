@@ -104,7 +104,6 @@ public class MetricDataParser {
                 final String exchangeName = util.getStringValue("exchange", federationLink);
                 final String upstreamName = util.getStringValue("upstream", federationLink);
                 final String status = util.getStringValue("status", federationLink);
-                logger.debug(String.format("Creating federation metrics name: %s value: %s path: %s"), exchangeName + "|" + upstreamName, String.valueOf(status.equals("running") ? 1 : 0), metricPrefix + prefix + exchangeName + "|" + upstreamName + "|running");
                 Metric metric = new Metric(exchangeName + "|" + upstreamName, String.valueOf(status.equals("running") ? 1 : 0), metricPrefix + prefix + exchangeName + "|" + upstreamName + "|running");
                 metrics.add(metric);
             }

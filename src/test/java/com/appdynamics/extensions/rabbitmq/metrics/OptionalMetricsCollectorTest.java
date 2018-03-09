@@ -11,6 +11,7 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
@@ -24,6 +25,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -43,12 +45,11 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
 @RunWith(MockitoJUnitRunner.class)
-public class FederationMetricsCollectorTest {
+public class OptionalMetricsCollectorTest {
 
     @Mock
     private TasksExecutionServiceProvider serviceProvider;
 
-    private Map server;
     @Mock
     private MonitorConfiguration monitorConfiguration;
 
@@ -59,17 +60,19 @@ public class FederationMetricsCollectorTest {
     private MetricDataParser dataParser;
 
     @Mock
+    private Stat stat;
+
+    @Mock
     private MetricsCollectorUtil metricsCollectorUtil;
 
-    private FederationMetricsCollector metricsCollectorTask;
+    private OptionalMetricsCollector metricsCollectorTask;
 
-    public static final Logger logger = Logger.getLogger(FederationMetricsCollector.class);
+    public static final Logger logger = Logger.getLogger(OptionalMetricsCollector.class);
 
-    private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));;
+    private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
 
     private Map<String, String> expectedValueMap = new HashMap<String, String>();
-    private Map<String, List<Map<String, String>>> allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
-    private List<Map<String, List<Map<String, String>>>> metricsFromConfig = (List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("com/appdynamics/extensions/rabbitmq/metrics");
+
     private List<Metric> metrics = new ArrayList<Metric>();
 
 
@@ -78,38 +81,13 @@ public class FederationMetricsCollectorTest {
 
         Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
         Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
+        Mockito.when(stat.getAlias()).thenReturn("FederationLinks");
+        Mockito.when(stat.getUrl()).thenReturn("/api/federation-links");
 
-        metricsFromConfig = ((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
+        dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
 
-        for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
-            allMetricsFromConfig.putAll(metricsConfigEntry);
-        }
-
-        dataParser = Mockito.spy(new MetricDataParser(allMetricsFromConfig, "", instances.getQueueGroups(), instances.getExcludeQueueRegex()));
-
-        metricsCollectorTask = Mockito.spy(new FederationMetricsCollector(monitorConfiguration, instances.getInstances()[0], metricWriter, metrics, dataParser));
+        metricsCollectorTask = Mockito.spy(new OptionalMetricsCollector(stat, monitorConfiguration, instances.getInstances()[0], metricWriter, dataParser, "true"));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
-
-
-
-        doAnswer(new Answer(){
-
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                for(Metric metric: metrics) {
-
-                    String actualValue = metric.getMetricValue();
-                    String metricName = metric.getMetricPath();
-                    if (expectedValueMap.containsKey(metricName)) {
-                        String expectedValue = expectedValueMap.get(metricName);
-                        Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
-                        expectedValueMap.remove(metricName);
-                    } else {
-                        System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
-                        Assert.fail("Unknown Metric " + metricName);
-                    }
-                }
-                return null;
-            }}).when(metricWriter).transformAndPrintMetrics(metrics);
 
         doAnswer(new Answer() {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -117,15 +95,11 @@ public class FederationMetricsCollectorTest {
                 String url = (String) invocationOnMock.getArguments()[1];
                 logger.info("Returning the mocked data for the api " + url);
                 String file = null;
-                if (url.contains("/overview")) {
-                    file = "/json/overview.json";
-                    return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
-                } else if (url.contains("federation-links")) {
+                 if (url.contains("federation-links")) {
                     file = "/json/federation-links.json";
                     return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
                 }
                 return null;
-
             }
         }).when(metricsCollectorUtil).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
     }
@@ -136,8 +110,21 @@ public class FederationMetricsCollectorTest {
         initExpectedFederationMetrics();
         Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         metricsCollectorTask.run();
-        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
-                , expectedValueMap.isEmpty());
+        for(Metric metric: metricsCollectorTask.getMetrics()) {
+
+            String actualValue = metric.getMetricValue();
+            String metricName = metric.getMetricPath();
+            if (expectedValueMap.containsKey(metricName)) {
+                String expectedValue = expectedValueMap.get(metricName);
+                Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
+                expectedValueMap.remove(metricName);
+            } else {
+                System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
+                Assert.fail("Unknown Metric " + metricName);
+            }
+        }
+        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap,
+                 expectedValueMap.isEmpty());
     }
 
     private void initExpectedFederationMetrics() {

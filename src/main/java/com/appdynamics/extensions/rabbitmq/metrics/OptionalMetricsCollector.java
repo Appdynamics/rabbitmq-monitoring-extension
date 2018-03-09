@@ -39,17 +39,24 @@ public class OptionalMetricsCollector implements Runnable {
 
     private MetricDataParser dataParser;
 
+    private String federationFlag;
+
+    public List<Metric> getMetrics() {
+        return metrics;
+    }
+
     public void setMetricsCollectorUtil(MetricsCollectorUtil metricsCollectorUtil) {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser){
+    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser, String federationFlag){
 
         this.stat = stat;
         this.configuration = configuration;
         this.instanceInfo = instanceInfo;
         this.metricWriteHelper = metricWriteHelper;
         this.dataParser = dataParser;
+        this.federationFlag = federationFlag;
     }
 
     public void run() {
@@ -58,7 +65,6 @@ public class OptionalMetricsCollector implements Runnable {
         logger.debug("Running Optional Metrics Collection task for url: " + url);
 
         ArrayNode optionalJson = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, ArrayNode.class);
-        String federationFlag = ((Map<String, String>) configuration.getConfigYml().get("endpointFlags")).get("federationPlugin");
         if(stat.getAlias().equalsIgnoreCase("FederationLinks") && federationFlag.equalsIgnoreCase("true"))
         {
             metrics.addAll(dataParser.parseFederationData(optionalJson));

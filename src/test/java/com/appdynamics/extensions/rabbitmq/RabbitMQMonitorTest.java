@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
+
 public class RabbitMQMonitorTest {
 
     @Test
@@ -20,6 +21,7 @@ public class RabbitMQMonitorTest {
         RabbitMQMonitor monitor = new RabbitMQMonitor();
         Map<String, String> taskArgs = Maps.newHashMap();
         taskArgs.put("config-file", "src/test/resources/test-config.yml");
+        taskArgs.put("metric-file", "src/test/resources/test-metrics.xml");
         monitor.execute(taskArgs, null);
     }
 }

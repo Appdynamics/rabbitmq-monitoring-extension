@@ -22,6 +22,16 @@ queueGroups:
 
 excludeQueueRegex: ^[0-9]*
 
+filter:
+  nodes:
+    includes: [".*"]
+  queues:
+    includes: [".*"]
+
+endpointFlags:
+  federationPlugin: "false"
+  overview: "true"
+
 encryptionKey: "myKey"
 
 servers:

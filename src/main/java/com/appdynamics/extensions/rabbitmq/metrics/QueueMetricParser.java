@@ -16,6 +16,7 @@ import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStatTracker;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
 import com.google.common.base.Strings;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -54,14 +55,29 @@ public class QueueMetricParser {
      *
      * @param queues
      */
-    protected List<Metric> parseQueueData(ArrayNode queues, ArrayNode nodes) {
+    protected List<Metric> parseQueueData(ArrayNode queues, ArrayNode nodeJson) {
 
         List<Metric> metrics = new ArrayList<Metric>();
         ObjectMapper oMapper = new ObjectMapper();
 
-        logger.debug("Queue json: " + queues);
+        if (nodeJson != null) {
+            for (JsonNode node : nodeJson) {
+                String name = util.getStringValue("name", node);
+                if (name != null) {
 
+                    List<JsonNode> nodeQueues = getQueues(queues, name);
+                    String prefix = "Nodes|" + name;
+
+                    //Nodes|$node|Messages
+                    metrics.addAll(addQueueProps(metricPrefix + prefix, nodeQueues));
+                }
+
+            }
+        }
         if (queues != null) {
+            //flag to ensure summary is calculated only once
+            boolean summaryStat = false;
+
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
 
             GroupStatTracker tracker = new GroupStatTracker(queueGroups);
@@ -86,36 +102,44 @@ public class QueueMetricParser {
 
                 GroupStat groupStat = tracker.getGroupStat(vHost, qName);
                 boolean showIndividualStats = groupStat.isShowIndividualStats();
-                String prefix = "Queues|" + vHost + "|" + qName;
-                String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName();
-                BigInteger consumers = new BigInteger("0");
+                String prefix = "Queues|" + vHost + "|" + qName + "|";
+                String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName() + "|";
+                BigInteger consumers = util.getMetricValue("consumers", queue, "false");
+
+                if(showIndividualStats) {
+                    Metric metric = new Metric("Consumers", String.valueOf(consumers), metricPrefix + prefix + "Consumers");
+                    metrics.add(metric);
+                }
+                groupStat.add(groupPrefix + "Consumers", consumers);
 
                 for(Stat childStat: stat.getStats()){
                     String statPrefix = prefix;
-                    String statGroupPrefix = groupPrefix;
+                    String statGroupPrefix = groupPrefix + "Messages|";
 
-                    if(StringUtils.hasText(stat.getAlias())){
-                        statPrefix += "|" + stat.getAlias() +"|";
-                        statGroupPrefix += groupPrefix + "|" + stat.getAlias() +"|";
-                    }
-
-                    if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Summary"))
+                    if(StringUtils.hasText(childStat.getAlias()) && childStat.getAlias().equalsIgnoreCase("QueuesSummary") && !summaryStat) {
+                        summaryStat = true;
                         statPrefix = "Summary|Messages|";
+                    }else if(StringUtils.hasText(childStat.getAlias()) && childStat.getAlias().equalsIgnoreCase("QueuesSummary") && summaryStat){
+                        continue;
+                    }else{
+                        statPrefix += childStat.getAlias() +"|";
+                    }
 
                     for(MetricConfig metricConfig: childStat.getMetricConfig()){
 
                         Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
 
-                        BigInteger value = util.getMetricValue(metricConfig.getAttr(), queue, metricConfig.isBoolean());
+                        BigInteger value = util.getMetricValue(metricConfig.getAttr(), queue.get("message_stats"), metricConfig.isBoolean());
                         String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
                         if (showIndividualStats) {
                             Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + statPrefix + metricName, propertiesMap);
                             metrics.add(metric);
                         }
-                        if(!(stat.getAlias().equalsIgnoreCase("Replication")) || !(stat.getAlias().equalsIgnoreCase("Summary"))) {
-                            groupStat.add(statGroupPrefix + metricConfig.getAttr(), consumers);
+                        if(!("Replication".equalsIgnoreCase(childStat.getAlias())) && !("QueuesSummary".equalsIgnoreCase(childStat.getAlias()))) {
+                            groupStat.add(statGroupPrefix + metricConfig.getAlias(), consumers);
                             groupStat.setMetricPropertiesMap(propertiesMap);
-                            util.addToMap(valueMap, metricConfig.getAttr(), value);
+                            groupStat.setCollectDeltaMap(statGroupPrefix + metricConfig.getAlias(), Boolean.valueOf(metricConfig.getDelta()));
+                            util.addToMap(valueMap, metricConfig.getAlias(), value);
                         }
                     }
                 }
@@ -161,5 +185,36 @@ public class QueueMetricParser {
         }
         return new Metric("Consumers", String.valueOf(count), metricPrefix + "Summary|Consumers" );
 
+    }
+
+    private List<Metric> addQueueProps(String metricPrefix, List<JsonNode> nodeQueues) {
+
+        List<Metric> metrics = new ArrayList<Metric>();
+
+        for (JsonNode queue : nodeQueues) {
+            metrics.add(new Metric("Available", String.valueOf(util.getMetricValue("messages_ready", queue, "false")), metricPrefix  + "|" + "Messages|Available"));
+            metrics.add(new Metric("Pending Acknowledgements", String.valueOf(util.getMetricValue("messages_unacknowledged", queue, "false")), metricPrefix  + "|" + "Messages|Pending Acknowledgements"));
+            metrics.add(new Metric("Count", String.valueOf(util.getMetricValue("consumers", queue, "false")), metricPrefix  + "|" + "Consumers|Count"));
+        }
+        return metrics;
+    }
+
+    /**
+     * Get a list of queues for the give node.
+     *
+     * @param queues
+     * @param nodeName
+     * @return
+     */
+    private List<JsonNode> getQueues(ArrayNode queues, String nodeName) {
+        List<JsonNode> nodeQueues = new ArrayList<JsonNode>();
+        if (queues != null && nodeName != null) {
+            for (JsonNode queue : queues) {
+                if (nodeName.equalsIgnoreCase(util.getStringValue("node", queue))) {
+                    nodeQueues.add(queue);
+                }
+            }
+        }
+        return nodeQueues;
     }
 }

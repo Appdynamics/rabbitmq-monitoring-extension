@@ -7,10 +7,12 @@
 
 package com.appdynamics.extensions.rabbitmq.metrics;
 
+import com.appdynamics.extensions.AMonitorJob;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
+import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
@@ -24,6 +26,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -42,16 +45,13 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
+
 @RunWith(MockitoJUnitRunner.class)
 public class MetricsCollectorTest {
 
 
     @Mock
     private TasksExecutionServiceProvider serviceProvider;
-
-    private Map server;
-    @Mock
-    private MonitorConfiguration monitorConfiguration;
 
     @Mock
     private MetricWriteHelper metricWriter;
@@ -62,41 +62,41 @@ public class MetricsCollectorTest {
     @Mock
     private MetricsCollectorUtil metricsCollectorUtil;
 
+    private Stat.Stats stat;
+
     private MetricsCollector metricsCollectorTask;
+
+    private MonitorConfiguration monitorConfiguration = new MonitorConfiguration("RabbitMQ", "Custom Metrics|RabbitMQ|", Mockito.mock(AMonitorJob.class));
 
     public static final Logger logger = Logger.getLogger(MetricsCollectorTest.class);
 
     private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));;
 
     private Map<String, String> expectedValueMap = new HashMap<String, String>();
-    private Map<String, List<Map<String, String>>> allMetricsFromConfig = new HashMap<String, List<Map<String, String>>>();
-    private List<Map<String, List<Map<String, String>>>> metricsFromConfig = (List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("com/appdynamics/extensions/rabbitmq/metrics");
-    private Map<String, String> endpointsFlag = (Map<String,String>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("endpointFlags");
+
     private List<Metric> metrics = new ArrayList<Metric>();
 
 
     @Before
     public void before(){
 
+        monitorConfiguration.setConfigYml("src/test/resources/test-config.yml");
+        monitorConfiguration.setMetricsXml("src/test/resources/test-metrics.xml", Stat.Stats.class);
+
         Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
         Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
 
-        metricsFromConfig = ((List<Map<String, List<Map<String, String>>>>)YmlReader.readFromFile(new File("src/test/resources/test-config.yml")).get("metrics"));
+        stat = (Stat.Stats) monitorConfiguration.getMetricsXmlConfiguration();
 
-        for(Map<String, List<Map<String, String>>> metricsConfigEntry: metricsFromConfig){
-            allMetricsFromConfig.putAll(metricsConfigEntry);
-        }
+        dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
 
-        dataParser = Mockito.spy(new MetricDataParser(allMetricsFromConfig, "", instances.getQueueGroups(), instances.getExcludeQueueRegex()));
-
-        metricsCollectorTask = Mockito.spy(new MetricsCollector(monitorConfiguration, instances.getInstances()[0], metricWriter,metrics,
-                metricsFromConfig, "true", dataParser));
+        metricsCollectorTask = Mockito.spy(new MetricsCollector(stat.getStats()[0],monitorConfiguration, instances.getInstances()[0], metricWriter,
+                 "true", dataParser, instances.getQueueGroups()));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
 
 
         doAnswer(new Answer(){
-
             public Object answer(InvocationOnMock invocation) throws Throwable {
                 for(Metric metric: metrics) {
 
@@ -141,9 +141,6 @@ public class MetricsCollectorTest {
                 if (url.contains("/overview")) {
                     file = "/json/overview.json";
                     return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
-                } else if (url.contains("federation-links")) {
-                    file = "/json/federation-links.json";
-                    return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
                 }
                 return null;
 
@@ -162,8 +159,9 @@ public class MetricsCollectorTest {
         initExpectedQueueMetrics();
         initExpectedClusterMetrics();
 
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
+       // Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         metricsCollectorTask.run();
+        validateMetrics();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -179,23 +177,9 @@ public class MetricsCollectorTest {
         initExpectedClusterMetrics();
         instances.getQueueGroups()[0].setShowIndividualStats(true);
 
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
+        //Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         metricsCollectorTask.run();
-        Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
-                , expectedValueMap.isEmpty());
-    }
-
-    @Test
-    public void checkReturnsFederationStatusWhenAvailable() throws TaskExecutionException {
-        expectedValueMap = new HashMap<String, String>();
-        initExpectedNodeMetrics();
-        initExpectedSummaryMetrics();
-        initExpectedGroupMetrics();
-        initExpectedQueueMetrics();
-        initExpectedClusterMetrics();
-
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
-        metricsCollectorTask.run();
+        validateMetrics();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
                 , expectedValueMap.isEmpty());
     }
@@ -220,7 +204,7 @@ public class MetricsCollectorTest {
         //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|connections Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels","1");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels Delta","0");
-        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|consumers","1");
+        expectedValueMap.put("Clusters|rabbitmqCluster|Objects|Consumers","1");
         //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|consumers Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Total","1");
         expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Running","1");
@@ -229,10 +213,10 @@ public class MetricsCollectorTest {
     }
 
     private void initExpectedQueueMetrics() {
-        expectedValueMap.put("Queues|Default|node1q1consumers", "1");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "36");
+        expectedValueMap.put("Queues|Default|node1q1|Consumers", "1");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "0");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Available Delta", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "50");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "0");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged", "8");
         //expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged Delta", "0");
@@ -252,19 +236,19 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
-        expectedValueMap.put("Summary|Messages|Available", "37");
-        expectedValueMap.put("Summary|Messages|Delivered (Total)", "23");
-        expectedValueMap.put("Summary|Messages|Published", "34");
-        expectedValueMap.put("Summary|Messages|Redelivered", "28");
-        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "52");
+        /*expectedValueMap.put("Summary|Messages|Available", "36");
+        expectedValueMap.put("Summary|Messages|Delivered (Total)", "0");
+        expectedValueMap.put("Summary|Messages|Published", "0");
+        expectedValueMap.put("Summary|Messages|Redelivered", "0");
+        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "50");*/
         expectedValueMap.put("Summary|Queues", "2");
 
 
 
-        expectedValueMap.put("Queues|Default|node2q2consumers", "1");
-        expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "1");
+        expectedValueMap.put("Queues|Default|node2q2|Consumers", "1");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "0");
         //expectedValueMap.put("Queues|Default|node2q2|Messages|Available Delta", "0");
-        expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "2");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "0");
         //expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged", "0");
         //expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged Delta", "0");
@@ -291,25 +275,26 @@ public class MetricsCollectorTest {
         expectedValueMap.put("|Summary|Channels", "2");
         expectedValueMap.put("Summary|Consumers", "2");
         expectedValueMap.put("Summary|Queues", "2");
-        expectedValueMap.put("Summary|Messages|Delivered (Total)", "23");
-        expectedValueMap.put("Summary|Messages|Published", "34");
-        expectedValueMap.put("Summary|Messages|Available", "37");
-        expectedValueMap.put("Summary|Messages|Redelivered", "28");
-        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "52");
+        expectedValueMap.put("Summary|Messages|Delivered (Total)", "20");
+        expectedValueMap.put("Summary|Messages|Published", "30");
+        expectedValueMap.put("Summary|Messages|Available", "0");
+        expectedValueMap.put("Summary|Messages|Redelivered", "25");
+        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "0");
     }
 
+
     private void initExpectedGroupMetrics() {
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|redeliver", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_get", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|publish", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|deliver_no_ack", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|get", "2");
-        expectedValueMap.put("Queue Groups|Default|group1messages_ready", "2");
-        expectedValueMap.put("Queue Groups|Default|group1consumers", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|ack", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|get_no_ack", "2");
-        expectedValueMap.put("Queue Groups|Default|group1messages_unacknowledged", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Redelivered", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered (Total)", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Published", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Consumers", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "2");
     }
 
     private void initExpectedNodeMetrics() {
@@ -318,8 +303,8 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory Free Alarm Activated", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Memory(MB)", "127895872");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets", "3");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "94");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "24");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count", "1");
         expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors", "26");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "0");
@@ -334,6 +319,21 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
+    private void validateMetrics(){
+        for(Metric metric: metricsCollectorTask.getMetrics()) {
+
+            String actualValue = metric.getMetricValue();
+            String metricName = metric.getMetricPath();
+            if (expectedValueMap.containsKey(metricName)) {
+                String expectedValue = expectedValueMap.get(metricName);
+                Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
+                expectedValueMap.remove(metricName);
+            } else {
+                System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
+                Assert.fail("Unknown Metric " + metricName);
+            }
+        }
+    }
 
     private Instances initialiseInstances(Map<String, ?> configYml) {
 
