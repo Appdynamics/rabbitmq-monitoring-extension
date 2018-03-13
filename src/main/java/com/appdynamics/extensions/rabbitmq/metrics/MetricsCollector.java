@@ -15,6 +15,7 @@ import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,8 @@ public class MetricsCollector implements Runnable {
 
     private ArrayNode nodeDataJson;
 
+    private static ObjectMapper objectMapper = new ObjectMapper();
+
     public List<Metric> getMetrics() {
         return metrics;
     }
@@ -74,7 +77,7 @@ public class MetricsCollector implements Runnable {
         String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
         logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
         nodeDataJson = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
-        metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson));
+        metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson, objectMapper));
 
         for(Stat childStat: stat.getStats()){
             if(childStat.getUrl() != null) {
@@ -86,7 +89,7 @@ public class MetricsCollector implements Runnable {
                 if(childStat.getAlias().equalsIgnoreCase("Clusters")) {
                     logger.debug("Overview metric flag: " + overviewMetricFlag);
                     if( overviewMetricFlag.equalsIgnoreCase("true")) {
-                        json = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+                        json = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, JsonNode.class);
                     }
                 }else{
                     json = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
@@ -94,13 +97,13 @@ public class MetricsCollector implements Runnable {
 
                 if(childStat.getAlias().equalsIgnoreCase("Queues")){
                     QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
-                    metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson));
+                    metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson, objectMapper));
                 }else if(childStat.getAlias().equalsIgnoreCase("Channels")){
                     ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
-                    metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson));
+                    metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson, objectMapper));
                 }else if(childStat.getAlias().equalsIgnoreCase("Clusters")){
                     OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());
-                    metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson));
+                    metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson, objectMapper));
                 }
             }
         }

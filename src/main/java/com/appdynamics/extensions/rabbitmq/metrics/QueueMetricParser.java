@@ -55,10 +55,9 @@ public class QueueMetricParser {
      *
      * @param queues
      */
-    protected List<Metric> parseQueueData(ArrayNode queues, ArrayNode nodeJson) {
+    protected List<Metric> parseQueueData(ArrayNode queues, ArrayNode nodeJson, ObjectMapper oMapper) {
 
         List<Metric> metrics = new ArrayList<Metric>();
-        ObjectMapper oMapper = new ObjectMapper();
 
         if (nodeJson != null) {
             for (JsonNode node : nodeJson) {
@@ -128,7 +127,6 @@ public class QueueMetricParser {
                     for(MetricConfig metricConfig: childStat.getMetricConfig()){
 
                         Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
-
                         BigInteger value = util.getMetricValue(metricConfig.getAttr(), queue.get("message_stats"), metricConfig.isBoolean());
                         String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
                         if (showIndividualStats) {
@@ -136,10 +134,9 @@ public class QueueMetricParser {
                             metrics.add(metric);
                         }
                         if(!("Replication".equalsIgnoreCase(childStat.getAlias())) && !("QueuesSummary".equalsIgnoreCase(childStat.getAlias()))) {
-                            groupStat.add(statGroupPrefix + metricConfig.getAlias(), consumers);
+                            groupStat.add(statGroupPrefix + metricConfig.getAlias(), value);
                             groupStat.setMetricPropertiesMap(propertiesMap);
-                            groupStat.setCollectDeltaMap(statGroupPrefix + metricConfig.getAlias(), Boolean.valueOf(metricConfig.getDelta()));
-                            util.addToMap(valueMap, metricConfig.getAlias(), value);
+                            util.addToMap(valueMap, statGroupPrefix + metricConfig.getAlias(), value);
                         }
                     }
                 }
@@ -191,10 +188,16 @@ public class QueueMetricParser {
 
         List<Metric> metrics = new ArrayList<Metric>();
 
+        Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+
         for (JsonNode queue : nodeQueues) {
-            metrics.add(new Metric("Available", String.valueOf(util.getMetricValue("messages_ready", queue, "false")), metricPrefix  + "|" + "Messages|Available"));
-            metrics.add(new Metric("Pending Acknowledgements", String.valueOf(util.getMetricValue("messages_unacknowledged", queue, "false")), metricPrefix  + "|" + "Messages|Pending Acknowledgements"));
-            metrics.add(new Metric("Count", String.valueOf(util.getMetricValue("consumers", queue, "false")), metricPrefix  + "|" + "Consumers|Count"));
+            util.addToMap(valueMap, metricPrefix  + "|" + "Messages|Available" , util.getMetricValue("messages_ready", queue, "false"));
+            util.addToMap(valueMap, metricPrefix  + "|" + "Messages|Pending Acknowledgements" , util.getMetricValue("messages_unacknowledged", queue, "false"));
+            util.addToMap(valueMap, metricPrefix  + "|" + "Consumers|Count" , util.getMetricValue("consumers", queue, "false"));
+        }
+
+        for(Map.Entry entry: valueMap.entrySet()){
+            metrics.add(new Metric(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()), String.valueOf(entry.getKey())));
         }
         return metrics;
     }

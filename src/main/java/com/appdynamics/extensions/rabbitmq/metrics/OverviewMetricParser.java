@@ -28,6 +28,7 @@ public class OverviewMetricParser {
 
     private String metricPrefix;
 
+
     private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
     public OverviewMetricParser(Stat stat, String metricPrefix) {
@@ -35,10 +36,9 @@ public class OverviewMetricParser {
         this.metricPrefix = metricPrefix;
     }
 
-    protected List<Metric> parseOverviewData(JsonNode overview, ArrayNode nodes) {
+    protected List<Metric> parseOverviewData(JsonNode overview, ArrayNode nodes, ObjectMapper oMapper) {
 
         List<Metric> metrics = new ArrayList<Metric>();
-
         if (overview != null) {
             JsonNode clusterNode = overview.get("cluster_name");
             //In some older versions, the node name is different
@@ -48,12 +48,10 @@ public class OverviewMetricParser {
             if (clusterNode != null) {
                 String clusterName = clusterNode.getTextValue();
                 String prefix = "Clusters|" + clusterName + "|";
+
                 //Queue Totals
-
-
                 for(Stat childStat: stat.getStats()){
-
-                    metrics.addAll(report(overview.get(childStat.getUrl()), childStat.getMetricConfig(), metricPrefix + prefix + childStat.getAlias(), true));
+                    metrics.addAll(report(overview.get(childStat.getUrl()), childStat.getMetricConfig(), metricPrefix + prefix + childStat.getAlias(), oMapper));
                 }
 
                 //Total Nodes
@@ -91,10 +89,9 @@ public class OverviewMetricParser {
         return metrics;
     }
 
-    private List<Metric> report(JsonNode node, MetricConfig[] fields, String metricPrefix, boolean useDictionary) {
+    private List<Metric> report(JsonNode node, MetricConfig[] fields, String metricPrefix, ObjectMapper oMapper) {
         List<Metric> metrics = new ArrayList<Metric>();
         if (node != null && fields != null) {
-            ObjectMapper oMapper = new ObjectMapper();
 
             for (MetricConfig field : fields) {
                 Map<String, String> propertiesMap = oMapper.convertValue(field, Map.class);

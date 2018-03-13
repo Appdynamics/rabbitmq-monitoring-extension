@@ -26,7 +26,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -44,7 +43,6 @@ import java.util.Map;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
-
 
 @RunWith(MockitoJUnitRunner.class)
 public class MetricsCollectorTest {
@@ -284,17 +282,17 @@ public class MetricsCollectorTest {
 
 
     private void initExpectedGroupMetrics() {
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Redelivered", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered (Total)", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Published", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Redelivered", "28");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered", "21");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered (Total)", "23");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Published", "34");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack", "21");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got", "6");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Consumers", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "2");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "2");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "8");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "13");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "0");
     }
 
     private void initExpectedNodeMetrics() {

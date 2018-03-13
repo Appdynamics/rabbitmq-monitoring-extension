@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class ChannelMetricParser {
      * @param channelJson
      */
 
-    protected List<Metric> parseChannelData(ArrayNode channelJson, ArrayNode nodeJson){
+    protected List<Metric> parseChannelData(ArrayNode channelJson, ArrayNode nodeJson, ObjectMapper oMapper){
 
         List<Metric> metrics = new ArrayList<Metric>();
         if (nodeJson != null) {
@@ -55,7 +56,7 @@ public class ChannelMetricParser {
                     String prefix = "Nodes|" + name;
 
                     //Nodes|$node|Messages
-                    metrics.addAll(addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels));
+                    metrics.addAll(addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels, oMapper));
 
                 }
 
@@ -66,24 +67,32 @@ public class ChannelMetricParser {
     }
 
     // Check how to change this metricPrefix specific to this call
-    private List<Metric> addChannelMessageProps(String metricPrefix, List<JsonNode> nodeChannels){
+    private List<Metric> addChannelMessageProps(String metricPrefix, List<JsonNode> nodeChannels, ObjectMapper oMapper){
 
         List<Metric> metrics = new ArrayList<Metric>();
-        ObjectMapper oMapper = new ObjectMapper();
+
+        Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+        Map<String, MetricConfig> propertiesMap = new HashMap<String, MetricConfig>();
+
 
         for (JsonNode channel : nodeChannels) {
             JsonNode msgStats = channel.get("message_stats");
             logger.debug("Message stats value: " +msgStats);
                 for(MetricConfig metricConfig: stat.getMetricConfig()){
-                    Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
                     if (msgStats != null) {
                         BigInteger statVal = util.getMetricValue(metricConfig.getAttr(), msgStats, metricConfig.isBoolean());
                         if(statVal!=null) {
-                            logger.debug(String.format("Channel Metrics with name: %s value: %s path: %s", metricConfig.getAttr(), statVal, metricPrefix+"|"+metricConfig.getAlias()));
-                            metrics.add(new Metric(metricConfig.getAttr(), String.valueOf(statVal), metricPrefix + "|" + metricConfig.getAlias(), propertiesMap));
+                            util.addToMap(valueMap, metricConfig.getAlias(), statVal);
+                            propertiesMap.put(metricConfig.getAlias(), metricConfig);
                         }
                     }
                 }
+
+                for(Map.Entry entry: valueMap.entrySet()){
+                    metrics.add(new Metric(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()),
+                            metricPrefix + "|" +String.valueOf(entry.getKey()), oMapper.convertValue(propertiesMap.get(entry.getKey()), Map.class)));
+                }
+
         }
 
         return metrics;
@@ -91,7 +100,7 @@ public class ChannelMetricParser {
 
 
     /**
-     * Total cont of Channels for the server.
+     * Total count of Channels for the server.
      *
      * @param channels
      */
@@ -126,4 +135,5 @@ public class ChannelMetricParser {
         }
         return nodeChannels;
     }
+
 }

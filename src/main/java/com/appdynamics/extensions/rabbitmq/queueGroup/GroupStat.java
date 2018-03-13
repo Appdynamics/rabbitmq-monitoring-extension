@@ -65,12 +65,6 @@ public class GroupStat {
         }
     }
 
-    public void setCollectDeltaMap(String metric, Boolean collectDelta){
-        if(collectDeltaMap!=null){
-            collectDeltaMap.put(metric,collectDelta);
-        }
-    }
-
     public Map<String, BigInteger> getValueMap() {
         return valueMap;
     }

@@ -81,7 +81,7 @@ public class MetricsCollectorUtil {
             }
             return json;
         } catch (Exception ex) {
-            logger.debug("Error while fetching the '/api/federation-links' data, returning NULL", ex);
+            logger.debug("Error while fetching the " + url + " data, returning NULL", ex);
             return null;
         }
     }
@@ -130,7 +130,6 @@ public class MetricsCollectorUtil {
      */
     protected BigInteger getMetricValue(String value, JsonNode node, String isBool){
 
-        logger.debug(String.format("Value: %s node: %s", value, node));
         BigInteger metricValue;
         if(Boolean.valueOf(isBool)){
             metricValue = getNumericValueForBoolean(value, node, -1);

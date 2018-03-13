@@ -57,12 +57,10 @@ public class MetricDataParser {
      * @param stat
      * @param nodes
      */
-    protected List<Metric> parseNodeData(Stat stat, ArrayNode nodes) {
+    protected List<Metric> parseNodeData(Stat stat, ArrayNode nodes, ObjectMapper oMapper) {
         List<Metric> metrics = new ArrayList<Metric>();
 
         if (nodes != null) {
-
-            ObjectMapper oMapper = new ObjectMapper();
 
             for (JsonNode node : nodes) {
                 String name = util.getStringValue("name", node);
@@ -75,7 +73,6 @@ public class MetricDataParser {
                         logger.info("Not Skipping node name "+name+ " as it is present in the include filter");
                     }
                     String prefix = StringUtils.trim(stat.getAlias(), "|") + "|" + name;
-
                     for(MetricConfig metricConfig: stat.getMetricConfig()){
                         BigInteger metricValue =  util.getMetricValue(metricConfig.getAttr(), node, metricConfig.isBoolean());
                         if(metricValue!=null) {
