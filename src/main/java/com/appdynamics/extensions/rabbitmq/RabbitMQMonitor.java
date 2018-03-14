@@ -42,16 +42,11 @@ public class RabbitMQMonitor extends ABaseMonitor {
         return "RabbitMQ Monitor";
     }
 
+
     @Override
-    protected void initialize(Map<String, String> args) {
-        if (this.configuration == null) {
-            this.monitorJob = this.createMonitorJob();
-            MonitorConfiguration conf = new MonitorConfiguration(this.monitorName, this.getDefaultMetricPrefix(), this.monitorJob);
-            conf.setConfigYml((String)args.get("config-file"));
-            this.initializeMoreStuff(conf);
-            this.configuration = conf;
-            this.configuration.setMetricsXml((String)args.get("metric-file"), Stat.Stats.class);
-        }
+    protected void initializeMoreStuff(Map<String, String> args, MonitorConfiguration conf) {
+        conf.setMetricsXml(args.get("metric-file"), Stat.Stats.class);
+
     }
 
     private void initialiseInstances(Map<String, ?> configYml) {
@@ -87,7 +82,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else if(!Strings.isNullOrEmpty((String) instance.get("encryptedPassword"))){
                     try {
                         Map<String, String> args = Maps.newHashMap();
-                        args.put(TaskInputArgs.PASSWORD_ENCRYPTED, (String)instance.get("encryptedPassword"));
+                        args.put(TaskInputArgs.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
                         args.put(TaskInputArgs.ENCRYPTION_KEY, (String)instance.get("encryptionKey"));
                         info.setPassword(CryptoUtil.getPassword(args));
 

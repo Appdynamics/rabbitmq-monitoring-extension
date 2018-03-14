@@ -28,7 +28,7 @@ public class MetricConfig {
     @XmlAttribute
     private BigDecimal multiplier;
     @XmlElement(name="isBoolean")
-    private String isBoolean;
+    private String isBoolean= "false";
 
     public String getAttr() {
         return attr;
