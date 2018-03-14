@@ -20,6 +20,7 @@ import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,6 +108,8 @@ public class MetricsCollector implements Runnable {
                 }
             }
         }
+
+        metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "Availability"));
 
         if (metrics != null && metrics.size() > 0) {
             logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());

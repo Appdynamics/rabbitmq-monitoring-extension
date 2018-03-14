@@ -11,6 +11,9 @@ AggregationType = AVG | SUM | OBS
 TimeRollup = AVG | SUM | CUR
 ClusterRollup = IND | COL
 -->
+<!--
+Set delta = true for metric to report per-min data
+-->
 <stats>
     <!-- Items in Nodes|<node> - data looked up from /api/nodes nodeDataMetric-->
     <stat url="/api/nodes" alias="Nodes" filter-name="nodes" children="entries">
@@ -31,8 +34,8 @@ ClusterRollup = IND | COL
 
             <stat alias="Messages" name="queueMessageStatsProps">
                 <metric attr="ack" alias="Acknowledged"/>
-                <metric attr="deliver_get" alias="Delivered (Total)" delta="true"/>
-                <metric attr="deliver" alias="Delivered" delta="true"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="deliver" alias="Delivered"/>
                 <metric attr="deliver_no_ack" alias="Delivered No-Ack"/>
                 <metric attr="get" alias="Got"/>
                 <metric attr="get_no_ack" alias="Got No-Ack"/>
@@ -55,21 +58,21 @@ ClusterRollup = IND | COL
 
             <!-- Items in Summary|Messages - data looked up from /api/queues-->
             <stat name="queueSummaryProps" alias="QueuesSummary">
-                <metric attr="messages_ready" alias="Available" delta="true"/>
-                <metric attr="deliver_get" alias="Delivered (Total)" delta="true"/>
-                <metric attr="publish" alias="Published" delta="true"/>
-                <metric attr="redeliver" alias="Redelivered" delta="true"/>
-                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" delta="true"/>
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="publish" alias="Published"/>
+                <metric attr="redeliver" alias="Redelivered"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
             </stat>
         </stat>
 
         <!-- Items in Nodes|<node>|Messages - data looked up from /api/channels-->
         <stat url="/api/channels" name="channelNodeMessageProps" children="entries" alias="Channels">
-            <metric attr="ack" alias="Acknowledged" delta="true"/>
+            <metric attr="ack" alias="Acknowledged"/>
             <metric attr="deliver" alias="Delivered"/>
-            <metric attr="deliver_no_ack" alias="Delivered No-Ack" delta="true"/>
+            <metric attr="deliver_no_ack" alias="Delivered No-Ack"/>
             <metric attr="get_no_ack" alias="Got No-Ack"/>
-            <metric attr="publish" alias="Published" delta="true"/>
+            <metric attr="publish" alias="Published"/>
             <metric attr="redeliver" alias="Redelivered"/>
         </stat>
 
@@ -102,6 +105,10 @@ ClusterRollup = IND | COL
     </stat>
 
     <stat url="/api/federation-links" alias="FederationLinks">
+    </stat>
+
+    <stat url="/api/exchanges" alias="Exchanges">
+        <metric attr="confirm" alias="Confirm"/>
     </stat>
 
 </stats>
