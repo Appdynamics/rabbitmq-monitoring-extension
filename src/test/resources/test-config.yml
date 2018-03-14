@@ -20,8 +20,6 @@ queueGroups:
 #  queueNameRegex: temp.+
 #  showIndividualStats: false
 
-excludeQueueRegex: ^[0-9]*
-
 filter:
   nodes:
     includes: [".*"]
