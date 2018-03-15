@@ -32,6 +32,7 @@ endpointFlags:
   federationPlugin: "false"
   overview: "true"
 
+#TODO connectTimeout and socketTimeout will not work from servers section, they have to be under connection. Please check expected.config.yml.
 servers:
 
    - host: "localhost"
@@ -44,6 +45,7 @@ servers:
      socketTimeout: 10000
      displayName : "Server2"
 
+#TODO Please choose this carefully. I don't think this will be enough for one server also.
 # number of concurrent tasks
 numberOfThreads: 5
 

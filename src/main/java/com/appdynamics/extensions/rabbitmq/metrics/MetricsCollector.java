@@ -108,7 +108,7 @@ public class MetricsCollector implements Runnable {
                 }
             }
         }
-
+        //TODO Wrong metricPath
         metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "Availability"));
 
         if (metrics != null && metrics.size() > 0) {

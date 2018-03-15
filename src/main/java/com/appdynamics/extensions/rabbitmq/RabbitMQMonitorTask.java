@@ -21,6 +21,7 @@ import com.appdynamics.extensions.rabbitmq.metrics.MetricsCollector;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
 import com.google.common.collect.Lists;
+import com.sun.xml.internal.bind.v2.TODO;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
@@ -75,6 +76,12 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
             for(Stat stat: metricConfig.getStats()) {
 
+                /*TODO Since the metricsCollector is a thread, a counter has to be used to lock the RabbitMQMonitorTask.
+                 If a lock is not used, the RabbitMQMonitorTask will get over before the MetricsCollectorTask is completed,
+                 and the following will not work:
+                 1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
+                 2. Metrics counter for a job run will be incorrect.
+                 */
                 if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Nodes")) {
                     MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration, instanceInfo, metricWriter,
                              endpointFlagsMap.get("overview"), dataParser, queueGroups);
@@ -83,6 +90,12 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
                     configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
                 }else {
                     logger.debug("Stat: " +stat.getAlias());
+                    /*TODO Since the OptionalMetricsCollector is a thread, a counter has to be used to lock the RabbitMQMonitorTask.
+                    If a lock is not used, the RabbitMQMonitorTask will get over before the OptionalMetricsCollector is completed,
+                    and the following will not work:
+                    1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
+                    2. Metrics counter for a job run will be incorrect.
+                    */
                     OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"));
                     configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
                 }
@@ -90,6 +103,8 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
+            //TODO Avavilability metric should be server specific, but here I see that the metricPath will be Custom Metrics|Redis|Availability
+            //TODO Also there is a bug, you need to append separator to metricPrefix, eventhough a Pipe is there in the config.yml, it is trimmed in MonitorConfiguration.
             metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), metricPrefix + "Availability"));
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         }

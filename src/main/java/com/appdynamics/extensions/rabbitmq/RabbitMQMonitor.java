@@ -83,6 +83,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                     try {
                         Map<String, String> args = Maps.newHashMap();
                         args.put(TaskInputArgs.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
+                        //TODO "encryptionKey" field is not available from instance. It is outside "servers".
                         args.put(TaskInputArgs.ENCRYPTION_KEY, (String)instance.get("encryptionKey"));
                         info.setPassword(CryptoUtil.getPassword(args));
 
@@ -125,7 +126,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
             logger.error("no instances configured");
         }
         List<Map<String,?>> queueGroups = (List<Map<String, ?>>) configYml.get("queueGroups");
-        if(queueGroups!=null && queueGroups.size()>0){
+        if(queueGroups != null && queueGroups.size() > 0){
             int index = 0;
             QueueGroup[] groups =new QueueGroup[queueGroups.size()];
             for(Map<String,?> group : queueGroups){
@@ -153,6 +154,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
 
         AssertUtils.assertNotNull(this.configuration.getMetricsXmlConfiguration(), "Metrics xml not available");
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
+        //TODO Why do we need to pass the entire instances? If instances is required for queueGroups data, only that can be passed? The design for InstanceInfo looks weird.....queueGroups part should be separate, it can be accesses from configuration.
         for (InstanceInfo instanceInfo : instances.getInstances()) {
             RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances);
             serviceProvider.submit((String) instanceInfo.getDisplayName(), task);
