@@ -105,12 +105,14 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else{
                     info.setUseSSL(false);
                 }
+                //TODO Does not belong here
                 if(instance.get("connectTimeout")!=null){
                     info.setConnectTimeout((Integer) instance.get("connectTimeout"));
                 }
                 else{
                     info.setConnectTimeout(10000);
                 }
+                //TODO Does not belong here
                 if(instance.get("socketTimeout")!=null){
                     info.setSocketTimeout((Integer) instance.get("socketTimeout"));
                 }

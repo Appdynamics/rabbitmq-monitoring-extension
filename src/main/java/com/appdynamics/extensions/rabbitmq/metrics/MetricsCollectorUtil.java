@@ -55,7 +55,7 @@ public class MetricsCollectorUtil {
             map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase() + "_" + displayName, map.get(key)));
         }
     }
-
+    // TODO Redundant method. Available in HttpClientUtils of commons.
     public ArrayNode getJson(CloseableHttpClient client, String url) {
         HttpGet get = new HttpGet(url);
         ObjectMapper mapper = new ObjectMapper();
@@ -70,7 +70,7 @@ public class MetricsCollectorUtil {
         }
         return json;
     }
-
+    // TODO Redundant method. Available in HttpClientUtils of commons.
     public  <T> T getOptionalJson(CloseableHttpClient client, String url, Class<T> clazz) {
         try {
             HttpGet get = new HttpGet(url);

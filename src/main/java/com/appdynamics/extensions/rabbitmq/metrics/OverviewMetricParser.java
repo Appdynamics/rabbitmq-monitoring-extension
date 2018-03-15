@@ -66,6 +66,7 @@ public class OverviewMetricParser {
                             runningCount++;
                         }
                     }
+                    //TODO There is no metricPrefix in the metricPath
                     metrics.add(new Metric("Running", String.valueOf(runningCount), nodePrefix + "Running"));
 
                     if (runningCount < nodes.size()) {

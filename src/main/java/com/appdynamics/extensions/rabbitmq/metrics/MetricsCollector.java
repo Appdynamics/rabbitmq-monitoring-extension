@@ -80,6 +80,7 @@ public class MetricsCollector implements Runnable {
         nodeDataJson = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
         metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson, objectMapper));
 
+        // TODO Since each childStat has an API call, Shouldn't this be a separate thread?
         for(Stat childStat: stat.getStats()){
             if(childStat.getUrl() != null) {
 
@@ -108,7 +109,7 @@ public class MetricsCollector implements Runnable {
                 }
             }
         }
-        //TODO Wrong metricPath
+        //TODO Wrong metricPath -> No server specific data in the path
         metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "Availability"));
 
         if (metrics != null && metrics.size() > 0) {

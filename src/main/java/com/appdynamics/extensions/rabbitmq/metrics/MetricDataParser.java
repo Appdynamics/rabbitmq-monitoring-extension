@@ -66,11 +66,11 @@ public class MetricDataParser {
                 String name = util.getStringValue("name", node);
                 if (name != null) {
                     if(!util.isIncluded(configuration, name, stat)){
-                        logger.info("Skipping node name "+name+ " as it is not present in the include filter");
+                        logger.info("Skipping node name " + name + " as it is not present in the include filter");
                         continue;
                     }
                     else{
-                        logger.info("Not Skipping node name "+name+ " as it is present in the include filter");
+                        logger.info("Not Skipping node name " + name + " as it is present in the include filter");
                     }
                     String prefix = StringUtils.trim(stat.getAlias(), "|") + "|" + name;
                     for(MetricConfig metricConfig: stat.getMetricConfig()){
