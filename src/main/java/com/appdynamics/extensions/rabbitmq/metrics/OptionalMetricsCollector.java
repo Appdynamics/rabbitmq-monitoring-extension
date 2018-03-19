@@ -9,6 +9,7 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.Phaser;
 
 public class OptionalMetricsCollector implements Runnable {
 
@@ -41,6 +42,8 @@ public class OptionalMetricsCollector implements Runnable {
 
     private String federationFlag;
 
+    private Phaser phaser;
+
     public List<Metric> getMetrics() {
         return metrics;
     }
@@ -49,7 +52,7 @@ public class OptionalMetricsCollector implements Runnable {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser, String federationFlag){
+    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser, String federationFlag, Phaser phaser){
 
         this.stat = stat;
         this.configuration = configuration;
@@ -57,19 +60,26 @@ public class OptionalMetricsCollector implements Runnable {
         this.metricWriteHelper = metricWriteHelper;
         this.dataParser = dataParser;
         this.federationFlag = federationFlag;
+        this.phaser = phaser;
     }
 
     public void run() {
 
-        String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
-        logger.debug("Running Optional Metrics Collection task for url: " + url);
+        try {
+            String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
+            logger.debug("Running Optional Metrics Collection task for url: " + url);
 
-        ArrayNode optionalJson = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, ArrayNode.class);
-        if(stat.getAlias().equalsIgnoreCase("FederationLinks") && federationFlag.equalsIgnoreCase("true"))
-        {
-            metrics.addAll(dataParser.parseFederationData(optionalJson));
-        }else{
-            metrics.addAll(dataParser.parseAdditionalData(stat, optionalJson));
+            ArrayNode optionalJson = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+            if (stat.getAlias().equalsIgnoreCase("FederationLinks") && federationFlag.equalsIgnoreCase("true")) {
+                metrics.addAll(dataParser.parseFederationData(optionalJson));
+            } else {
+                metrics.addAll(dataParser.parseAdditionalData(stat, optionalJson));
+            }
+        }catch(Exception e){
+            logger.error("OptionalMetricsCollector error: " + e.getMessage());
+           }finally {
+            logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
+            phaser.arriveAndDeregister();
         }
 
         if (metrics != null && metrics.size() > 0) {

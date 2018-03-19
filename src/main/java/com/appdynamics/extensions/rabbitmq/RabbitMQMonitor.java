@@ -83,8 +83,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                     try {
                         Map<String, String> args = Maps.newHashMap();
                         args.put(TaskInputArgs.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
-                        //TODO "encryptionKey" field is not available from instance. It is outside "servers".
-                        args.put(TaskInputArgs.ENCRYPTION_KEY, (String)instance.get("encryptionKey"));
+                        args.put(TaskInputArgs.ENCRYPTION_KEY, (String)configYml.get("encryptionKey"));
                         info.setPassword(CryptoUtil.getPassword(args));
 
                     } catch (IllegalArgumentException e) {
@@ -105,23 +104,8 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else{
                     info.setUseSSL(false);
                 }
-                //TODO Does not belong here
-                if(instance.get("connectTimeout")!=null){
-                    info.setConnectTimeout((Integer) instance.get("connectTimeout"));
-                }
-                else{
-                    info.setConnectTimeout(10000);
-                }
-                //TODO Does not belong here
-                if(instance.get("socketTimeout")!=null){
-                    info.setSocketTimeout((Integer) instance.get("socketTimeout"));
-                }
-                else{
-                    info.setSocketTimeout(10000);
-                }
                 instancesToSet[index++] = info;
             }
-            this.instances.setExcludeQueueRegex((String) configYml.get("excludeQueueRegex"));
             this.instances.setInstances(instancesToSet);
         }
         else{
@@ -156,9 +140,8 @@ public class RabbitMQMonitor extends ABaseMonitor {
 
         AssertUtils.assertNotNull(this.configuration.getMetricsXmlConfiguration(), "Metrics xml not available");
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
-        //TODO Why do we need to pass the entire instances? If instances is required for queueGroups data, only that can be passed? The design for InstanceInfo looks weird.....queueGroups part should be separate, it can be accesses from configuration.
         for (InstanceInfo instanceInfo : instances.getInstances()) {
-            RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances);
+            RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances.getQueueGroups());
             serviceProvider.submit((String) instanceInfo.getDisplayName(), task);
         }
     }

@@ -11,22 +11,17 @@ import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
-import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
-import com.appdynamics.extensions.rabbitmq.instance.Instances;
-import com.appdynamics.extensions.rabbitmq.metrics.OptionalMetricsCollector;
 import com.appdynamics.extensions.rabbitmq.metrics.MetricDataParser;
 import com.appdynamics.extensions.rabbitmq.metrics.MetricsCollector;
+import com.appdynamics.extensions.rabbitmq.metrics.OptionalMetricsCollector;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
-import com.google.common.collect.Lists;
-import com.sun.xml.internal.bind.v2.TODO;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Phaser;
 
 public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
@@ -46,66 +41,51 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
     private String metricPrefix;
 
-    private List<Metric> metrics;
 
     private Map<String, String> endpointFlagsMap;
 
-    public void setMetrics(List<Metric> metrics) {
-        this.metrics = metrics;
-    }
 
 
-    RabbitMQMonitorTask(TasksExecutionServiceProvider serviceProvider, InstanceInfo instanceInfo, Instances instances) {
+    RabbitMQMonitorTask(TasksExecutionServiceProvider serviceProvider, InstanceInfo instanceInfo, QueueGroup[] queueGroups) {
         this.configuration = serviceProvider.getMonitorConfiguration();
         this.instanceInfo = instanceInfo;
         this.metricWriter = serviceProvider.getMetricWriteHelper();
         this.metricPrefix = configuration.getMetricPrefix();
         this.endpointFlagsMap = (Map<String, String>) configuration.getConfigYml().get("endpointFlags");
         this.displayName = instanceInfo.getDisplayName();
-        this.metrics = Lists.newArrayList();
-        this.queueGroups = instances.getQueueGroups();
+        this.queueGroups = queueGroups;
+
     }
 
 
     public void run() {
         try {
+            Phaser phaser = new Phaser();
 
             Stat.Stats metricConfig = (Stat.Stats) configuration.getMetricsXmlConfiguration();
 
             MetricDataParser dataParser = new MetricDataParser(metricPrefix + "|", configuration);
 
             for(Stat stat: metricConfig.getStats()) {
-
-                /*TODO Since the metricsCollector is a thread, a counter has to be used to lock the RabbitMQMonitorTask.
-                 If a lock is not used, the RabbitMQMonitorTask will get over before the MetricsCollectorTask is completed,
-                 and the following will not work:
-                 1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
-                 2. Metrics counter for a job run will be incorrect.
-                 */
                 if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Nodes")) {
+
                     MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration, instanceInfo, metricWriter,
-                             endpointFlagsMap.get("overview"), dataParser, queueGroups);
-
-
+                             endpointFlagsMap.get("overview"), dataParser, queueGroups, phaser);
                     configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
+                    logger.debug("Registering MetricCollectorTask phaser for {}", displayName);
+                    phaser.register();
                 }else {
-                    logger.debug("Stat: " +stat.getAlias());
-                    /*TODO Since the OptionalMetricsCollector is a thread, a counter has to be used to lock the RabbitMQMonitorTask.
-                    If a lock is not used, the RabbitMQMonitorTask will get over before the OptionalMetricsCollector is completed,
-                    and the following will not work:
-                    1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
-                    2. Metrics counter for a job run will be incorrect.
-                    */
-                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"));
+
+                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"), phaser);
                     configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
+                    logger.debug("Registering OptionalMetricCollectorTask phaser for {}", displayName);
+                    phaser.register();
                 }
             }
-
+            //Wait for all tasks to finish
+            phaser.arriveAndAwaitAdvance();
             logger.info("Completed the RabbitMQ Metric Monitoring task");
         } catch (Exception e) {
-            //TODO Avavilability metric should be server specific, but here I see that the metricPath will be Custom Metrics|Redis|Availability
-            //TODO Also there is a bug, you need to append separator to metricPrefix, eventhough a Pipe is there in the config.yml, it is trimmed in MonitorConfiguration.
-            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), metricPrefix + "Availability"));
             logger.error("Unexpected error while running the RabbitMQ Monitor", e);
         }
 

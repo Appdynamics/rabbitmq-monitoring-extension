@@ -10,7 +10,10 @@ package com.appdynamics.extensions.rabbitmq.config.input;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import java.math.BigDecimal;
 
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -23,8 +26,12 @@ public class MetricConfig {
     private String alias;
     @XmlAttribute
     private String delta;
-    @XmlAttribute(name = "metric-type")
-    private String metricType;
+    @XmlAttribute
+    private String aggregationType;
+    @XmlAttribute
+    private String timeRollUpType;
+    @XmlAttribute
+    private String clusterRollUpType;
     @XmlAttribute
     private BigDecimal multiplier;
     @XmlElement(name="isBoolean")
@@ -54,14 +61,6 @@ public class MetricConfig {
         this.multiplier = multiplier;
     }
 
-    public String getMetricType() {
-        return metricType;
-    }
-
-    public void setMetricType(String metricType) {
-        this.metricType = metricType;
-    }
-
     public String isBoolean() {
         return isBoolean;
     }
@@ -76,5 +75,29 @@ public class MetricConfig {
 
     public void setDelta(String delta) {
         this.delta = delta;
+    }
+
+    public String getAggregationType() {
+        return aggregationType;
+    }
+
+    public void setAggregationType(String aggregationType) {
+        this.aggregationType = aggregationType;
+    }
+
+    public String getTimeRollUpType() {
+        return timeRollUpType;
+    }
+
+    public void setTimeRollUpType(String timeRollUpType) {
+        this.timeRollUpType = timeRollUpType;
+    }
+
+    public String getClusterRollUpType() {
+        return clusterRollUpType;
+    }
+
+    public void setClusterRollUpType(String clusterRollUpType) {
+        this.clusterRollUpType = clusterRollUpType;
     }
 }

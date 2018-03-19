@@ -1,3 +1,17 @@
+servers:
+
+   - host: "localhost"
+     port: 15672
+     useSSL: false
+     username: "guest"
+     password: "guest"
+     encryptedPassword: ""
+     displayName : "Server2"
+
+connection:
+  socketTimeout: 10000
+  connectTimeout: 10000
+
 ############
 ## Queue Group Configuration. The queue stats will be grouped by the 'groupName'
 ## if the 'queueNameRegex' matches the name of the Queue.
@@ -20,8 +34,6 @@ queueGroups:
 #  queueNameRegex: temp.+
 #  showIndividualStats: false
 
-encryptionKey: "myKey"
-
 filter:
   nodes:
     includes: [".*"]
@@ -32,20 +44,8 @@ endpointFlags:
   federationPlugin: "false"
   overview: "true"
 
-#TODO connectTimeout and socketTimeout will not work from servers section, they have to be under connection. Please check expected.config.yml.
-servers:
+encryptionKey: "myKey"
 
-   - host: "localhost"
-     port: 15672
-     useSSL: false
-     username: "guest"
-     password: "guest"
-     encryptedPassword: ""
-     connectTimeout: 10000
-     socketTimeout: 10000
-     displayName : "Server2"
-
-#TODO Please choose this carefully. I don't think this will be enough for one server also.
 # number of concurrent tasks
 numberOfThreads: 5
 

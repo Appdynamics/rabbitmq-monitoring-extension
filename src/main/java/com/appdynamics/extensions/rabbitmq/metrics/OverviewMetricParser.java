@@ -47,7 +47,7 @@ public class OverviewMetricParser {
             }
             if (clusterNode != null) {
                 String clusterName = clusterNode.getTextValue();
-                String prefix = "Clusters|" + clusterName + "|";
+                String prefix = metricPrefix + "Clusters|" + clusterName + "|";
 
                 //Queue Totals
                 for(Stat childStat: stat.getStats()){
@@ -66,7 +66,6 @@ public class OverviewMetricParser {
                             runningCount++;
                         }
                     }
-                    //TODO There is no metricPrefix in the metricPath
                     metrics.add(new Metric("Running", String.valueOf(runningCount), nodePrefix + "Running"));
 
                     if (runningCount < nodes.size()) {

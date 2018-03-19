@@ -12,12 +12,7 @@ import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.util.YmlUtils;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,36 +48,6 @@ public class MetricsCollectorUtil {
         for (String key:keys) {
             map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase(), map.get(key)));
             map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase() + "_" + displayName, map.get(key)));
-        }
-    }
-    // TODO Redundant method. Available in HttpClientUtils of commons.
-    public ArrayNode getJson(CloseableHttpClient client, String url) {
-        HttpGet get = new HttpGet(url);
-        ObjectMapper mapper = new ObjectMapper();
-        ArrayNode json = null;
-        try {
-            json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),ArrayNode.class);
-        }  catch (Exception e) {
-            logger.debug("Error occurred while fetching the response from " + url + " error: " + e);
-        }
-        if (logger.isDebugEnabled()) {
-            logger.debug("The url " + url + " responded with a json {}" + json);
-        }
-        return json;
-    }
-    // TODO Redundant method. Available in HttpClientUtils of commons.
-    public  <T> T getOptionalJson(CloseableHttpClient client, String url, Class<T> clazz) {
-        try {
-            HttpGet get = new HttpGet(url);
-            ObjectMapper mapper = new ObjectMapper();
-            T json = mapper.readValue(EntityUtils.toString(client.execute(get).getEntity()),clazz);
-            if (logger.isDebugEnabled()) {
-                logger.debug("The url " + url + " responded with a json " + json);
-            }
-            return json;
-        } catch (Exception ex) {
-            logger.debug("Error while fetching the " + url + " data, returning NULL", ex);
-            return null;
         }
     }
 

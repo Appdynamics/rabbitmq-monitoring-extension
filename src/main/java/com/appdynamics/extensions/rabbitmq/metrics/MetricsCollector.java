@@ -9,6 +9,7 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.http.UrlBuilder;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Phaser;
 
 
 public class MetricsCollector implements Runnable {
@@ -49,6 +51,9 @@ public class MetricsCollector implements Runnable {
 
     private ArrayNode nodeDataJson;
 
+    private Phaser phaser;
+
+
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     public List<Metric> getMetrics() {
@@ -60,7 +65,7 @@ public class MetricsCollector implements Runnable {
     }
 
     public MetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
-                             String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups)
+                             String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups, Phaser phaser)
     {
         this.stat = stat;
         this.configuration = configuration;
@@ -69,48 +74,56 @@ public class MetricsCollector implements Runnable {
         this.overviewMetricFlag = overviewMetricFlag;
         this.dataParser = dataParser;
         this.queueGroups = queueGroups;
+        this.phaser = phaser;
     }
 
 
     public void run() {
 
-        String endpoint = stat.getUrl();
-        String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
-        logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
-        nodeDataJson = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
-        metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson, objectMapper));
+        try {
+            String endpoint = stat.getUrl();
+            String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
+            logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
+            nodeDataJson = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+            metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson, objectMapper));
 
-        // TODO Since each childStat has an API call, Shouldn't this be a separate thread?
-        for(Stat childStat: stat.getStats()){
-            if(childStat.getUrl() != null) {
+            for (Stat childStat : stat.getStats()) {
+                if (childStat.getUrl() != null) {
 
-                url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(childStat.getUrl()).build();
-                logger.info("Fetching the RabbitMQ Stats for stat child: " + childStat.getAlias() + " from the URL {}" + url );
+                    url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(childStat.getUrl()).build();
+                    logger.info("Fetching the RabbitMQ Stats for stat child: " + childStat.getAlias() + " from the URL {}" + url);
 
-                JsonNode json = null;
-                if(childStat.getAlias().equalsIgnoreCase("Clusters")) {
-                    logger.debug("Overview metric flag: " + overviewMetricFlag);
-                    if( overviewMetricFlag.equalsIgnoreCase("true")) {
-                        json = metricsCollectorUtil.getOptionalJson(this.configuration.getHttpClient(), url, JsonNode.class);
+                    JsonNode json = null;
+                    if (childStat.getAlias().equalsIgnoreCase("Clusters")) {
+                        logger.debug("Overview metric flag: " + overviewMetricFlag);
+                        if (overviewMetricFlag.equalsIgnoreCase("true")) {
+                            json = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, JsonNode.class);
+                        }
+                    } else {
+                        json = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
                     }
-                }else{
-                    json = metricsCollectorUtil.getJson(this.configuration.getHttpClient(), url);
-                }
 
-                if(childStat.getAlias().equalsIgnoreCase("Queues")){
-                    QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
-                    metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson, objectMapper));
-                }else if(childStat.getAlias().equalsIgnoreCase("Channels")){
-                    ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
-                    metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson, objectMapper));
-                }else if(childStat.getAlias().equalsIgnoreCase("Clusters")){
-                    OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());
-                    metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson, objectMapper));
+                    if (childStat.getAlias().equalsIgnoreCase("Queues")) {
+                        QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
+                        metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson, objectMapper));
+                    } else if (childStat.getAlias().equalsIgnoreCase("Channels")) {
+                        ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
+                        metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson, objectMapper));
+                    } else if (childStat.getAlias().equalsIgnoreCase("Clusters")) {
+                        OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());
+                        metrics.addAll(overviewParser.parseOverviewData(json, nodeDataJson, objectMapper));
+                    }
                 }
             }
+            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Availability"));
         }
-        //TODO Wrong metricPath -> No server specific data in the path
-        metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "Availability"));
+        catch(Exception e){
+            logger.error("MetricsCollector error: " + e.getMessage());
+            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Availability"));
+        }finally {
+            logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
+            phaser.arriveAndDeregister();
+        }
 
         if (metrics != null && metrics.size() > 0) {
             logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());

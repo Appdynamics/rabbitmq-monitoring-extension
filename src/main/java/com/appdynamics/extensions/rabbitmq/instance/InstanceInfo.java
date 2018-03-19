@@ -14,8 +14,6 @@ public class InstanceInfo {
 	private Boolean useSSL;
 	private String username;
 	private String password;
-	private Integer connectTimeout;
-	private Integer socketTimeout;
 	private String displayName;
 	private String encryptedPassword;
 	private String encryptionKey;
@@ -49,18 +47,6 @@ public class InstanceInfo {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-	public Integer getConnectTimeout() {
-		return connectTimeout;
-	}
-	public void setConnectTimeout(Integer connectTimeout) {
-		this.connectTimeout = connectTimeout;
-	}
-	public Integer getSocketTimeout() {
-		return socketTimeout;
-	}
-	public void setSocketTimeout(Integer socketTimeout) {
-		this.socketTimeout = socketTimeout;
-	}
 	public String getEncryptedPassword() {
 		return encryptedPassword;
 	}
@@ -84,10 +70,6 @@ public class InstanceInfo {
 		builder.append(" useSSL : " + useSSL.toString());
 		builder.append("|");
 		builder.append(" username : " + username);
-		builder.append("|");
-		builder.append(" connectTimeout : " + connectTimeout.toString());
-		builder.append("|");
-		builder.append(" socketTimeout : " + socketTimeout.toString());
 		builder.append("|");
 		return builder.toString();
 	}

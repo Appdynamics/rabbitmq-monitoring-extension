@@ -6,10 +6,9 @@
   -->
 
 <!--
-metric-type = AggregationType.TimeRollup.ClusterRollup
-AggregationType = AVG | SUM | OBS
-TimeRollup = AVG | SUM | CUR
-ClusterRollup = IND | COL
+aggregationType = AVERAGE | SUM | OBSERVATION
+timeRollUpType = AVERAGE | SUM | CURRENT
+clusterRollUpType = INDIVIDUAL | COLLECTIVE
 -->
 <!--
 Set delta = true for metric to report per-min data
@@ -105,10 +104,6 @@ Set delta = true for metric to report per-min data
     </stat>
 
     <stat url="/api/federation-links" alias="FederationLinks">
-    </stat>
-
-    <stat url="/api/exchanges" alias="Exchanges">
-        <metric attr="confirm" alias="Confirm"/>
     </stat>
 
 </stats>
