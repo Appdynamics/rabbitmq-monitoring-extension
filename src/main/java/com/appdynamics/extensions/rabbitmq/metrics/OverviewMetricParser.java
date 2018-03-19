@@ -47,7 +47,7 @@ public class OverviewMetricParser {
             }
             if (clusterNode != null) {
                 String clusterName = clusterNode.getTextValue();
-                String prefix = metricPrefix + "Clusters|" + clusterName + "|";
+                String prefix = "Clusters|" + clusterName + "|";
 
                 //Queue Totals
                 for(Stat childStat: stat.getStats()){
