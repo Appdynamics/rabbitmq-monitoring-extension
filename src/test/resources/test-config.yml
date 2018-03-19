@@ -40,9 +40,11 @@ servers:
      username: "guest"
      password: "guest"
      encryptedPassword: ""
-     connectTimeout: 10000
-     socketTimeout: 10000
      displayName : "Server2"
+
+connection:
+  socketTimeout: 10000
+  connectTimeout: 10000
 
 # number of concurrent tasks
 numberOfThreads: 5

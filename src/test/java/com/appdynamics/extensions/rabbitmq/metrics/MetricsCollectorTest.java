@@ -11,6 +11,7 @@ import com.appdynamics.extensions.AMonitorJob;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
@@ -31,20 +32,26 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Phaser;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 
-@RunWith(MockitoJUnitRunner.class)
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(HttpClientUtils.class)
+@PowerMockIgnore("javax.net.ssl.*")
 public class MetricsCollectorTest {
 
 
@@ -59,6 +66,9 @@ public class MetricsCollectorTest {
 
     @Mock
     private MetricsCollectorUtil metricsCollectorUtil;
+
+    @Mock
+    private Phaser phaser;
 
     private Stat.Stats stat;
 
@@ -89,62 +99,35 @@ public class MetricsCollectorTest {
         dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
 
         metricsCollectorTask = Mockito.spy(new MetricsCollector(stat.getStats()[0],monitorConfiguration, instances.getInstances()[0], metricWriter,
-                 "true", dataParser, instances.getQueueGroups()));
+                 "true", dataParser, instances.getQueueGroups(), phaser));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
+        PowerMockito.mockStatic(HttpClientUtils.class);
 
-
-        doAnswer(new Answer(){
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                for(Metric metric: metrics) {
-
-                    String actualValue = metric.getMetricValue();
-                    String metricName = metric.getMetricPath();
-                    if (expectedValueMap.containsKey(metricName)) {
-                        String expectedValue = expectedValueMap.get(metricName);
-                        Assert.assertEquals("The value of the metric " + metricName + " failed", expectedValue, actualValue);
-                        expectedValueMap.remove(metricName);
-                    } else {
-                        System.out.println("\"" + metricName + "\",\"" + actualValue + "\"");
-                        Assert.fail("Unknown Metric " + metricName);
+        PowerMockito.when(HttpClientUtils.getResponseAsJson(any(CloseableHttpClient.class), anyString(), any(Class.class))).thenAnswer(
+                new Answer() {
+                    public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        ObjectMapper mapper = new ObjectMapper();
+                        String url = (String) invocationOnMock.getArguments()[1];
+                        String var="ArrayNode";
+                        String file = null;
+                        if (url.contains("/nodes")) {
+                            file = "/json/nodes.json";
+                        } else if (url.contains("/channels")) {
+                            file = "/json/channels.json";
+                        } else if (url.contains("/queues")) {
+                            file = "/json/queues.json";
+                        } else if (url.contains("/overview")) {
+                            file = "/json/overview.json";
+                        }
+                        logger.info("Returning the mocked data for the api " + file);
+                        if(url.contains("/overview")){
+                            return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
+                        }else {
+                            return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+                        }
                     }
-                }
-                return null;
-            }}).when(metricWriter).transformAndPrintMetrics(metrics);
-
-        doAnswer(new Answer() {
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-
-                ObjectMapper mapper = new ObjectMapper();
-                String url = (String) invocationOnMock.getArguments()[1];
-                String file = null;
-                if (url.contains("/nodes")) {
-                    file = "/json/nodes.json";
-                } else if (url.contains("/channels")) {
-                    file = "/json/channels.json";
-                } else if (url.contains("/queues")) {
-                    file = "/json/queues.json";
-                }
-                logger.info("Returning the mocked data for the api " + file);
-                return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
-            }
-        }).when(metricsCollectorUtil).getJson(any(CloseableHttpClient.class), anyString());
-
-        doAnswer(new Answer() {
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                ObjectMapper mapper = new ObjectMapper();
-                String url = (String) invocationOnMock.getArguments()[1];
-                logger.info("Returning the mocked data for the api " + url);
-                String file = null;
-                if (url.contains("/overview")) {
-                    file = "/json/overview.json";
-                    return mapper.readValue(getClass().getResourceAsStream(file), JsonNode.class);
-                }
-                return null;
-
-            }
-        }).when(metricsCollectorUtil).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
-
+                });
     }
 
     @Test
@@ -157,7 +140,6 @@ public class MetricsCollectorTest {
         initExpectedQueueMetrics();
         initExpectedClusterMetrics();
 
-       // Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         metricsCollectorTask.run();
         validateMetrics();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -175,7 +157,6 @@ public class MetricsCollectorTest {
         initExpectedClusterMetrics();
         instances.getQueueGroups()[0].setShowIndividualStats(true);
 
-        //Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
         metricsCollectorTask.run();
         validateMetrics();
         Assert.assertTrue("The expected values were not send. The missing values are " + expectedValueMap
@@ -184,85 +165,51 @@ public class MetricsCollectorTest {
 
     private void initExpectedClusterMetrics(){
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published","31");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Published Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Acknowledged","29");
         expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total)","32");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Messages|Delivered (Total) Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Messages","13");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Messages Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Available","13");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Available Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Pending Acknowledgements","7");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Queues|Pending Acknowledgements Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|queues","3");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|queues Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|exchanges","11");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|exchanges Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|connections","3");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|connections Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels","1");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|channels Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Objects|Consumers","1");
-        //expectedValueMap.put("Clusters|rabbitmqCluster|Objects|consumers Delta","0");
         expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Total","1");
         expectedValueMap.put("Clusters|rabbitmqCluster|Nodes|Running","1");
         expectedValueMap.put("Clusters|rabbitmqCluster|Cluster Health","1");
-        expectedValueMap.put("Availability","1");
     }
 
     private void initExpectedQueueMetrics() {
         expectedValueMap.put("Queues|Default|node1q1|Consumers", "1");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "0");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Available Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "0");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged", "8");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered (Total)", "20");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered (Total) Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered", "18");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack", "20");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered No-Ack Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got", "6");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Got Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Published Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
-        //expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered Delta", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
-        /*expectedValueMap.put("Summary|Messages|Available", "36");
-        expectedValueMap.put("Summary|Messages|Delivered (Total)", "0");
-        expectedValueMap.put("Summary|Messages|Published", "0");
-        expectedValueMap.put("Summary|Messages|Redelivered", "0");
-        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "50");*/
         expectedValueMap.put("Summary|Queues", "2");
 
 
 
         expectedValueMap.put("Queues|Default|node2q2|Consumers", "1");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Available Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered (Total)", "3");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered (Total) Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered", "3");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered No-Ack", "1");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered No-Ack Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Got", "0");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Got Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Got No-Ack", "1");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Published", "4");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Published Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered", "3");
-        //expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered Delta", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count", "0");
         expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count", "0");
@@ -278,6 +225,7 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Summary|Messages|Available", "0");
         expectedValueMap.put("Summary|Messages|Redelivered", "25");
         expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "0");
+        expectedValueMap.put("Server2|Availability","1");
     }
 
 
@@ -380,21 +328,8 @@ public class MetricsCollectorTest {
                 else{
                     info.setUseSSL(false);
                 }
-                if(instance.get("connectTimeout")!=null){
-                    info.setConnectTimeout((Integer) instance.get("connectTimeout"));
-                }
-                else{
-                    info.setConnectTimeout(10000);
-                }
-                if(instance.get("socketTimeout")!=null){
-                    info.setSocketTimeout((Integer) instance.get("connectTimeout"));
-                }
-                else{
-                    info.setSocketTimeout(10000);
-                }
                 instancesToSet[index++] = info;
             }
-            instancesObj.setExcludeQueueRegex((String) configYml.get("excludeQueueRegex"));
             instancesObj.setInstances(instancesToSet);
         }
         else{

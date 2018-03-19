@@ -6,10 +6,12 @@
   -->
 
 <!--
-metric-type = AggregationType.TimeRollup.ClusterRollup
-AggregationType = AVG | SUM | OBS
-TimeRollup = AVG | SUM | CUR
-ClusterRollup = IND | COL
+aggregationType = AVERAGE | SUM | OBSERVATION
+timeRollUpType = AVERAGE | SUM | CURRENT
+clusterRollUpType = INDIVIDUAL | COLLECTIVE
+-->
+<!--
+Set delta = true for metric to report per-min data
 -->
 <stats>
     <!-- Items in Nodes|<node> - data looked up from /api/nodes nodeDataMetric-->

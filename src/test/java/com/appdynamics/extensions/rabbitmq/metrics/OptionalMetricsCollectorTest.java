@@ -10,6 +10,7 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
@@ -20,31 +21,33 @@ import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Phaser;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 
-@RunWith(MockitoJUnitRunner.class)
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(HttpClientUtils.class)
 public class OptionalMetricsCollectorTest {
 
     @Mock
@@ -65,6 +68,9 @@ public class OptionalMetricsCollectorTest {
     @Mock
     private MetricsCollectorUtil metricsCollectorUtil;
 
+    @Mock
+    private Phaser phaser;
+
     private OptionalMetricsCollector metricsCollectorTask;
 
     public static final Logger logger = Logger.getLogger(OptionalMetricsCollector.class);
@@ -74,6 +80,7 @@ public class OptionalMetricsCollectorTest {
     private Map<String, String> expectedValueMap = new HashMap<String, String>();
 
     private List<Metric> metrics = new ArrayList<Metric>();
+
 
 
     @Before
@@ -86,22 +93,25 @@ public class OptionalMetricsCollectorTest {
 
         dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
 
-        metricsCollectorTask = Mockito.spy(new OptionalMetricsCollector(stat, monitorConfiguration, instances.getInstances()[0], metricWriter, dataParser, "true"));
+        metricsCollectorTask = Mockito.spy(new OptionalMetricsCollector(stat, monitorConfiguration, instances.getInstances()[0], metricWriter, dataParser, "true", phaser));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
-        doAnswer(new Answer() {
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                ObjectMapper mapper = new ObjectMapper();
-                String url = (String) invocationOnMock.getArguments()[1];
-                logger.info("Returning the mocked data for the api " + url);
-                String file = null;
-                 if (url.contains("federation-links")) {
-                    file = "/json/federation-links.json";
-                    return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
-                }
-                return null;
-            }
-        }).when(metricsCollectorUtil).getOptionalJson(any(CloseableHttpClient.class), anyString(), any(Class.class));
+        PowerMockito.mockStatic(HttpClientUtils.class);
+
+        PowerMockito.when(HttpClientUtils.getResponseAsJson(any(CloseableHttpClient.class), anyString(), any(Class.class))).thenAnswer(
+                new Answer() {
+                    public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        ObjectMapper mapper = new ObjectMapper();
+                        String url = (String) invocationOnMock.getArguments()[1];
+                        logger.info("Returning the mocked data for the api " + url);
+                        String file = null;
+                        if (url.contains("federation-links")) {
+                            file = "/json/federation-links.json";
+                            return mapper.readValue(getClass().getResourceAsStream(file), ArrayNode.class);
+                        }
+                        return null;
+                    }
+                });
     }
 
     @Test
@@ -179,21 +189,8 @@ public class OptionalMetricsCollectorTest {
                 else{
                     info.setUseSSL(false);
                 }
-                if(instance.get("connectTimeout")!=null){
-                    info.setConnectTimeout((Integer) instance.get("connectTimeout"));
-                }
-                else{
-                    info.setConnectTimeout(10000);
-                }
-                if(instance.get("socketTimeout")!=null){
-                    info.setSocketTimeout((Integer) instance.get("connectTimeout"));
-                }
-                else{
-                    info.setSocketTimeout(10000);
-                }
                 instancesToSet[index++] = info;
             }
-            instancesObj.setExcludeQueueRegex((String) configYml.get("excludeQueueRegex"));
             instancesObj.setInstances(instancesToSet);
         }
         else{
