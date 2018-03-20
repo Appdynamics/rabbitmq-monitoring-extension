@@ -81,6 +81,7 @@ public class MetricsCollector implements Runnable {
     public void run() {
 
         try {
+            phaser.register();
             String endpoint = stat.getUrl();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
             logger.info("Fetching the RabbitMQ Stats from the URL {}", url);

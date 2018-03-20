@@ -66,6 +66,7 @@ public class OptionalMetricsCollector implements Runnable {
     public void run() {
 
         try {
+            phaser.register();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
             logger.debug("Running Optional Metrics Collection task for url: " + url);
 
