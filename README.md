@@ -2,12 +2,12 @@
 
 This extension works only with the standalone machine agent.
 
-##Use Case
+## Use Case
 
 RabbitMQ is open source message broker software that implements the Advanced Message Queuing Protocol (AMQP).
 The RabbitMQ Monitoring extension collects metrics from an RabbitMQ management API and uploads them to the AppDynamics Controller.
 
-##Prerequisite
+## Prerequisite
 
 The RabbitMQ Management Plugin must be enabled. Please refer to  http://www.rabbitmq.com/management.html for more details.
 
@@ -15,7 +15,7 @@ In order to use this extension, you do need a Standalone JAVA Machine Agent (htt
 
 The extension needs to be able to connect to RabbitMQ in order to collect and send metrics. To do this, you will have to either establish a remote connection in between the extension and the product, or have an agent on the same machine running the product in order for the extension to collect and send the metrics.
 
-##Installation
+## Installation
 
 1. Download and unzip the RabbitMQMonitor.zip to the "<MachineAgent_Dir>/monitors" directory
 2. Edit the file config.yml as described below in Configuration Section, located in    <MachineAgent_Dir>/monitors/RabbitMQMonitor and update the RabbitMQ server(s) details.
@@ -25,7 +25,7 @@ The extension needs to be able to connect to RabbitMQ in order to collect and se
 
 Please place the extension in the "monitors" directory of your Machine Agent installation directory. Do not place the extension in the "extensions" directory of your Machine Agent installation directory.
 
-##Configuration
+## Configuration
 
 1. Queue Group Configuration
 
@@ -41,7 +41,6 @@ You can also exclude one or more queue(s) by supplying a regex to match such que
 3. EndPoint Flags
 
     Use endpoint-flags to enable/disable(set flag to true/false) metrics for overview and federation-plugin of RabbitMQ.
-
 
 4. Instances Configuration
 
@@ -120,18 +119,18 @@ numberOfThreads: 5
 #To find the  in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
 metricPrefix: Server|Component:<Component_ID>|Custom Metrics|RabbitMQ|
 ```
-##Credentials Encryption
+## Credentials Encryption
 
 Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
 
-##Extensions Workbench
+## Extensions Workbench
 Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
 
-##Troubleshooting
+## Troubleshooting
 1. Please ensure the RabbitMQ Management Plugin is enabled. Please check "" section of [this page](http://www.rabbitmq.com/management.html) for more details.
 2. Please follow the steps listed in this [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) in order to troubleshoot your issue. These are a set of common issues that customers might have faced during the installation of the extension. If these don't solve your issue, please follow the last step on the [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) to contact the support team.
 
-##Support Tickets
+## Support Tickets
 If after going through the [Troubleshooting Document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) you have not been able to get your extension working, please file a ticket and add the following information.
 
 Please provide the following in order for us to assist you better.
@@ -149,14 +148,14 @@ For any support related questions, you can also contact help@appdynamics.com.
 
 
 
-##Contributing
+## Contributing
 
 Always feel free to fork and contribute any changes directly here on GitHub.
 
-##Community
+## Community
 
 Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/eXchange/RabbitMQ-Monitoring-Extension/idi-p/5717) community.
 
-##Support
+## Support
 
 For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
