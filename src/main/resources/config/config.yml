@@ -47,7 +47,7 @@ endpointFlags:
 encryptionKey: "myKey"
 
 # number of concurrent tasks
-numberOfThreads: 5
+numberOfThreads: 15
 
 
 #This will create this metric in all the tiers, under this path

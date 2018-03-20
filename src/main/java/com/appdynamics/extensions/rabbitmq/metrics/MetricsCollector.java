@@ -115,15 +115,13 @@ public class MetricsCollector implements Runnable {
                     }
                 }
             }
-            //#TODO Name to be changed to "HeartBeat".
-            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Availability"));
+            metrics.add(new Metric("Heart Beat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Heart Beat"));
         }
         catch(Exception e){
             logger.error("MetricsCollector error: " + e.getMessage());
-            //#TODO Name to be changed to "HeartBeat"
-            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Availability"));
+            metrics.add(new Metric("Heart Beat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Heart Beat"));
         }finally {
-            logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
+            logger.debug("MetricsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();
         }
 

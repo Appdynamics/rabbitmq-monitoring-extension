@@ -66,7 +66,6 @@ public class OverviewMetricParser {
                             runningCount++;
                         }
                     }
-                    //#TODO Is the metricPath correct? I see it as "Clusters|<clusterName>|Nodes|Running"
                     metrics.add(new Metric("Running", String.valueOf(runningCount), nodePrefix + "Running"));
 
                     if (runningCount < nodes.size()) {
@@ -82,9 +81,6 @@ public class OverviewMetricParser {
 
                 }
             }
-        } else {
-            //#TODO Name to be changed to "HeartBeat" if it is the same metric mentioned oin the doc. Also needs server specific info in the metricPath.
-            metrics.add(new Metric("Availability", String.valueOf(BigInteger.ZERO), metricPrefix + "Availability"));
         }
         return metrics;
     }

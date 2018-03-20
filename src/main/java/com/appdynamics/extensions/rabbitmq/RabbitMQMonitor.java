@@ -142,8 +142,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
         for (InstanceInfo instanceInfo : instances.getInstances()) {
             RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances.getQueueGroups());
-            //#TODO If the user does not have a displayName, it will be null, since you are typecasting, it will be fine here, but it will be null in the metricPath for the metrics.
-            //So, an assertNotNull check has to happen here.
+            AssertUtils.assertNotNull(instanceInfo.getDisplayName(), "The displayName can not be null");
             serviceProvider.submit((String) instanceInfo.getDisplayName(), task);
         }
     }

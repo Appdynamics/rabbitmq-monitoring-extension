@@ -68,20 +68,16 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
             for(Stat stat: metricConfig.getStats()) {
                 if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Nodes")) {
-
+                    phaser.register();
                     MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration, instanceInfo, metricWriter,
                              endpointFlagsMap.get("overview"), dataParser, queueGroups, phaser);
                     configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
                     logger.debug("Registering MetricCollectorTask phaser for {}", displayName);
-                    //#TODO Will lead to a race condition. Needs to be done before the thread is given to the executor service.
-                    phaser.register();
                 }else {
-
+                    phaser.register();
                     OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"), phaser);
                     configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
                     logger.debug("Registering OptionalMetricCollectorTask phaser for {}", displayName);
-                    //#TODO Will lead to a race condition. Needs to be done before the thread is given to the executor service.
-                    phaser.register();
                 }
             }
             //Wait for all tasks to finish
