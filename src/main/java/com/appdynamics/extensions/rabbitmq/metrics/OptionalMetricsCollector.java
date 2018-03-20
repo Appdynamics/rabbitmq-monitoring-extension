@@ -77,7 +77,7 @@ public class OptionalMetricsCollector implements Runnable {
             }
         }catch(Exception e){
             logger.error("OptionalMetricsCollector error: " + e.getMessage());
-           }finally {
+        }finally {
             logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();
         }
