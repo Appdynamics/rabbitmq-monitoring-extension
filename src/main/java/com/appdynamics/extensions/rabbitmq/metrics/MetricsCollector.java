@@ -15,6 +15,7 @@ import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
+import com.sun.javafx.font.Metrics;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -81,6 +82,7 @@ public class MetricsCollector implements Runnable {
     public void run() {
 
         try {
+            //#TODO Will lead to race condition. This should be done in the constructor or before the object instantiation is done for the MetricsCollector.
             phaser.register();
             String endpoint = stat.getUrl();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
@@ -116,16 +118,18 @@ public class MetricsCollector implements Runnable {
                     }
                 }
             }
-            metrics.add(new Metric("Heart Beat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Heart Beat"));
+            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|HeartBeat"));
         }
         catch(Exception e){
             logger.error("MetricsCollector error: " + e.getMessage());
-            metrics.add(new Metric("Heart Beat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|Heart Beat"));
+            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|HeartBeat"));
         }finally {
             logger.debug("MetricsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();
         }
-
+        //#TODO The following if block should happen before the lock is released. Otherwise this will result in the following:
+        //1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
+        //2. Metrics counter for a job run will be incorrect.
         if (metrics != null && metrics.size() > 0) {
             logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());
             metricWriteHelper.transformAndPrintMetrics(metrics);

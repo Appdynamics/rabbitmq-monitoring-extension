@@ -67,12 +67,14 @@ public class RabbitMQMonitor extends ABaseMonitor {
                     info.setHost((String) instance.get("host"));
                 }
                 else{
+                    //#TODO This should not default to localhost, it should have an assert not null because localhost is not optional
                     info.setHost("localhost");
                 }
                 if(!Strings.isNullOrEmpty((String) instance.get("username"))){
                     info.setUsername((String) instance.get("username"));
                 }
                 else{
+                    //#TODO This should not default to guest, what if the host does not need a username and password?
                     info.setUsername("guest");
                 }
 
@@ -96,6 +98,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                     info.setPort((Integer) instance.get("port"));
                 }
                 else{
+                    //#TODO This should not default to 15762, this should have an assert not null as the port is mandatory
                     info.setPort(15672);
                 }
                 if(instance.get("useSSL")!=null){
