@@ -1,5 +1,4 @@
 # AppDynamics RabbitMQ Monitoring Extension
-
 This extension works only with the standalone machine agent.
 
 ## Use Case
@@ -9,9 +8,9 @@ The RabbitMQ Monitoring extension collects metrics from an RabbitMQ management A
 
 ## Prerequisite
 
-The RabbitMQ Management Plugin must be enabled. Please refer to  http://www.rabbitmq.com/management.html for more details.
+The RabbitMQ Management Plugin must be enabled. Please refer to  [this page](http://www.rabbitmq.com/management.html) for more details.
 
-In order to use this extension, you do need a Standalone JAVA Machine Agent (https://docs.appdynamics.com/display/PRO44/Java+Agent) or SIM Agent (https://docs.appdynamics.com/display/PRO44/Server+Visibility).  For more details on downloading these products, please  visit https://download.appdynamics.com/.
+In order to use this extension, you do need a [Standalone JAVA Machine Agent](https://docs.appdynamics.com/display/PRO44/Java+Agent) or [SIM Agent](https://docs.appdynamics.com/display/PRO44/Server+Visibility).  For more details on downloading these products, please  visit [here](https://download.appdynamics.com/).
 
 The extension needs to be able to connect to RabbitMQ in order to collect and send metrics. To do this, you will have to either establish a remote connection in between the extension and the product, or have an agent on the same machine running the product in order for the extension to collect and send the metrics.
 
@@ -23,26 +22,26 @@ The extension needs to be able to connect to RabbitMQ in order to collect and se
 4. Restart the Machine Agent
 
 
-Please place the extension in the "monitors" directory of your Machine Agent installation directory. Do not place the extension in the "extensions" directory of your Machine Agent installation directory.
+Please place the extension in the **"monitors"** directory of your **Machine Agent** installation directory. Do not place the extension in the **"extensions"** directory of your **Machine Agent** installation directory.
 
 ## Configuration
 
-1. Queue Group Configuration
+#### Queue Group Configuration
 
    The queue can be grouped and the metrics for the group of queues can be collected with this feature. The grouping can be   used for a scenario where there was a large number of Queues(20+) and they were very short lived (hours to couple of days). Another use case if for example, there are 10 queues working on 'order placement' and 5 queues working on 'user notification', then you can create a group for 'order placement' and get the collective stats.
 
    This will create a new tree node named "Queue Groups" as a sibling of "Queues". There is a file named "monitors/RabbitMQMonitor/config.yml" where you add the queue configuration.
 You can also exclude one or more queue(s) by supplying a regex to match such queue names. Please take a look at config.yml for detailed information.
 
-2. Include Filters
+#### Include Filters
 
     Use the regex in includes parameters of filters, to specify the nodes/queues you'd like to collect metrics on. Be default, the config.yml has includes filter set to include all nodes/queues.
 
-3. EndPoint Flags
+#### EndPoint Flags
 
     Use endpoint-flags to enable/disable(set flag to true/false) metrics for overview and federation-plugin of RabbitMQ.
 
-4. Instances Configuration
+#### Instances Configuration
 
    The extension supports reporting metrics from multiple rabbitMQ instances. Have a look at config.yml for more details.
 
@@ -65,7 +64,7 @@ servers:
      useSSL: false
      username: "guest"
      password: "guest"
- 	 displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
+ 	 displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
 
 connection:
   socketTimeout: 10000
@@ -152,10 +151,9 @@ For any support related questions, you can also contact help@appdynamics.com.
 
 Always feel free to fork and contribute any changes directly here on GitHub.
 
-## Community
+## Version
 
-Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/eXchange/RabbitMQ-Monitoring-Extension/idi-p/5717) community.
-
-## Support
-
-For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
+**Version**: 2.0.0
+**Controller Compatibility**: 3.7 or Later
+**Product  Tested On**: 3.2.0+
+**Last updated On**: 03/21/2018
