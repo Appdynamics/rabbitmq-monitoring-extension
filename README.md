@@ -1,5 +1,4 @@
 # AppDynamics RabbitMQ Monitoring Extension:
-This extension works only with the standalone machine agent.
 
 ## Use Case
 
@@ -57,14 +56,14 @@ servers:
      username: "guest"
      password: "guest"
      ##passwordEncrypted : Encrypted Password to be used, In this case do not use normal password field as above
-     displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
+     displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
 
    - host: "localhost"
      port: 15673
      useSSL: false
      username: "guest"
      password: "guest"
-     displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
+     displayName: "displayName2" //The display name to be used for the metrics of this server, mandatory
 
 connection:
   socketTimeout: 10000
@@ -152,8 +151,9 @@ For any support related questions, you can also contact help@appdynamics.com.
 Always feel free to fork and contribute any changes directly here on GitHub.
 
 ## Version
-
-**Version**: 2.0.0
-**Controller Compatibility**: 3.7 or Later
-**Product  Tested On**: 3.2.0+
-**Last updated On**: 03/21/2018
+|                          |            |
+|--------------------------|------------|
+|Current Version           |2.0.0       |
+|Controller Compatibility  |3.7 or Later|
+|Product Tested On         |3.2.0+      |
+|Last Update               |03/021/2018 |
