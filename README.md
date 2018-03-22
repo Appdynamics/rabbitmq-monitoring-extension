@@ -1,4 +1,5 @@
-# AppDynamics RabbitMQ Monitoring Extension: This extension works only with the standalone machine agent.
+# AppDynamics RabbitMQ Monitoring Extension:
+This extension works only with the standalone machine agent.
 
 ## Use Case
 
