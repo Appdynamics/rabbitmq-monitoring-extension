@@ -1,5 +1,4 @@
-# AppDynamics RabbitMQ Monitoring Extension
-This extension works only with the standalone machine agent.
+# AppDynamics RabbitMQ Monitoring Extension: This extension works only with the standalone machine agent.
 
 ## Use Case
 
@@ -64,7 +63,7 @@ servers:
      useSSL: false
      username: "guest"
      password: "guest"
- 	 displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
+     displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
 
 connection:
   socketTimeout: 10000
