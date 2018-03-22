@@ -154,7 +154,7 @@ Always feel free to fork and contribute any changes directly here on GitHub.
 ## Version
 |          Name            |  Version   |
 |--------------------------|------------|
-|Current Version           |2.0.0       |
+|Extension Version         |2.0.0       |
 |Controller Compatibility  |3.7 or Later|
 |Product Tested On         |3.2.0+      |
 |Last Update               |03/021/2018 |
