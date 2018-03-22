@@ -82,8 +82,6 @@ public class MetricsCollector implements Runnable {
     public void run() {
 
         try {
-            //#TODO Will lead to race condition. This should be done in the constructor or before the object instantiation is done for the MetricsCollector.
-            phaser.register();
             String endpoint = stat.getUrl();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
             logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
@@ -119,6 +117,10 @@ public class MetricsCollector implements Runnable {
                 }
             }
             metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + instanceInfo.getDisplayName() + "|HeartBeat"));
+            if (metrics != null && metrics.size() > 0) {
+                logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());
+                metricWriteHelper.transformAndPrintMetrics(metrics);
+            }
         }
         catch(Exception e){
             logger.error("MetricsCollector error: " + e.getMessage());
@@ -126,13 +128,6 @@ public class MetricsCollector implements Runnable {
         }finally {
             logger.debug("MetricsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();
-        }
-        //#TODO The following if block should happen before the lock is released. Otherwise this will result in the following:
-        //1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
-        //2. Metrics counter for a job run will be incorrect.
-        if (metrics != null && metrics.size() > 0) {
-            logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());
-            metricWriteHelper.transformAndPrintMetrics(metrics);
         }
     }
 

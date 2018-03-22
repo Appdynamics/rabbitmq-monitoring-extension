@@ -66,8 +66,6 @@ public class OptionalMetricsCollector implements Runnable {
     public void run() {
 
         try {
-            //#TODO Will lead to race condition. This should be done in the constructor or before the object instantiation is done for the OptionalMetricsCalculator.
-            phaser.register();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
             logger.debug("Running Optional Metrics Collection task for url: " + url);
 
@@ -77,18 +75,15 @@ public class OptionalMetricsCollector implements Runnable {
             } else {
                 metrics.addAll(dataParser.parseAdditionalData(stat, optionalJson));
             }
+            if (metrics != null && metrics.size() > 0) {
+                logger.debug("Printing optional metrics list of size " + metrics.size());
+                metricWriteHelper.transformAndPrintMetrics(metrics);
+            }
         }catch(Exception e){
             logger.error("OptionalMetricsCollector error: " + e.getMessage());
         }finally {
             logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();
-        }
-        //#TODO The following if block should happen before the lock is released. Otherwise this will result in the following:
-        //1. DerivedMetrics will not have the complete set of BaseMetrics of a specific Job run.
-        //2. Metrics counter for a job run will be incorrect.
-        if (metrics != null && metrics.size() > 0) {
-            logger.debug("Printing optional metrics list of size " + metrics.size());
-            metricWriteHelper.transformAndPrintMetrics(metrics);
         }
     }
 }
