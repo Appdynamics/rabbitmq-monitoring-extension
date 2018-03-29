@@ -117,16 +117,22 @@ public class MetricDataParser {
         logger.debug("Parsing optional data json: " + optionalJson);
         String prefix = stat.getAlias() + "|";
         if (optionalJson != null) {
+            for(JsonNode node: optionalJson) {
 
-            for(MetricConfig metricConfig: stat.getMetricConfig()){
+                String nodeName = util.lower(util.getStringValue("name", node, "Default"));
 
-                Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
+                prefix = prefix + nodeName + "|";
 
-                BigInteger value = util.getMetricValue(metricConfig.getAttr(), optionalJson, metricConfig.isBoolean());
-                String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
-                Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + prefix + metricName, propertiesMap);
-                metrics.add(metric);
+                for (MetricConfig metricConfig : stat.getMetricConfig()) {
 
+                    Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
+
+                    BigInteger value = util.getMetricValue(metricConfig.getAttr(), node, metricConfig.isBoolean());
+                    String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
+                    Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + prefix + metricName, propertiesMap);
+                    metrics.add(metric);
+
+                }
             }
 
         }
