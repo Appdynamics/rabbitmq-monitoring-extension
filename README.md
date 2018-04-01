@@ -5,13 +5,13 @@ This extension works only with the standalone machine agent.
 ##Use Case
 
 RabbitMQ is open source message broker software that implements the Advanced Message Queuing Protocol (AMQP). It is written in the Erlang programming language.
-The RabbitMQ Monitoring extension collects metrics from an RabbitMQ messaging server and uploads them to the AppDynamics Controller. 
+The RabbitMQ Monitoring extension collects metrics from an RabbitMQ messaging server and uploads them to the AppDynamics Controller.
 
-##Prerequisite
+## Prerequisite
 
 The RabbitMQ Management Plugin must be enabled. Please refer to http://www.rabbitmq.com/management.html for more details.
 
-##Installation
+## Installation
 
 The RabbitMQ Management Plugin must be enabled. Please refer to RabbitMQ Management API for more details.
 
@@ -19,13 +19,13 @@ The RabbitMQ Management Plugin must be enabled. Please refer to RabbitMQ Managem
 2. Edit the file config.yml as described below in Configuration Section, located in    <MachineAgent_Dir>/monitors/RabbitMQMonitor and update the RabbitMQ server(s) details.
 3. Restart the Machine Agent
 
-##Configuration
+## Configuration
 
 1. Queue Group Configuration
 
    The queue can be grouped and the metrics for the group of queues can be collected with this feature. The grouping can be   used for a scenario where there was a large number of Queues(20+) and they were very short lived (hours to couple of days). Another use case if for example, there are 10 queues working on 'order placement' and 5 queues working on 'user notification', then you can create a group for 'order placement' and get the collective stats.
 
-   This will create a new tree node named "Queue Groups" as a sibling of "Queues". There is a file named "monitors/RabbitMQMonitor/config.yml" where you add the queue configuration. 
+   This will create a new tree node named "Queue Groups" as a sibling of "Queues". There is a file named "monitors/RabbitMQMonitor/config.yml" where you add the queue configuration.
 You can also exclude one or more queue(s) by supplying a regex to match such queue names. Please take a look at config.yml for detailed information.
 
 2. Instances Configuration
@@ -73,7 +73,7 @@ servers:
      connectTimeout: 10000
      socketTimeout: 10000
      displayName: "displayName" //The display name to be used for the metrics of this server, mandatory
-     
+
    - host: "localhost"
      port: 15673
      useSSL: false
@@ -82,7 +82,7 @@ servers:
      connectTimeout: 10000
      socketTimeout: 10000  
  	 displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
- 	 
+
 ##encryptionKey: "myKey", the encryption key used to encrypt passowrd(s), same will be used to decrypt`
 
 # number of concurrent tasks
@@ -317,18 +317,18 @@ metricPrefix: Custom Metrics | RabbitMQ |
 #To find the  in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
 #metricPrefix: Server|Component:|Custom Metrics|RabbitMQ|
 ```
-##Workbench
+## Workbench
 
 Workbench is a feature by which you can preview the metrics before registering it with the controller. This is useful if you want to fine tune the configurations. Workbench is embedded into the extension jar.
 To use the workbench
 Follow all the installation steps
 Start the workbench with the command
       java -jar /monitors/RabbitMQMonitor/rabbitmq-monitoring-extension.jar
-   
+
 
 This starts an http server at http://host:9090/. This can be accessed from the browser.
 If the server is not accessible from outside/browser, you can use the following end points to see the list of registered metrics and errors.
-#Get the stats
+# Get the stats
     curl http://localhost:9090/api/stats
     #Get the registered metrics
     curl http://localhost:9090/api/metric-paths
@@ -337,26 +337,26 @@ Once the configuration is complete, you can kill the workbench and start the Mac
 
 
 
-##Password Encryption Support 
+## Password Encryption Support
 
 To avoid setting the clear text password in the config.yml. Please follow the process to encrypt the password and set the encrypted password and the key in the config.yml
-1. Download the util jar to encrypt the password from here 
-2. Encrypt password from the commandline 
-java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword 
+1. Download the util jar to encrypt the password from here
+2. Encrypt password from the commandline
+java -cp "appd-exts-commons-1.1.2.jar" com.appdynamics.extensions.crypto.Encryptor myKey myPassword
 3. Add the properties in the config.yml. See sample config above
 
 
-#Custom Dashboard
+# Custom Dashboard
 ![](https://github.com/Appdynamics/rabbitmq-monitoring-extension/raw/master/RabbitMQCustomDashboard.png)
 
-##Contributing
+## Contributing
 
 Always feel free to fork and contribute any changes directly here on GitHub.
 
-##Community
+## Community
 
 Find out more in the [AppSphere](http://appsphere.appdynamics.com/t5/eXchange/RabbitMQ-Monitoring-Extension/idi-p/5717) community.
 
-##Support
+## Support
 
 For any questions or feature request, please contact [AppDynamics Center of Excellence](mailto:ace-request@appdynamics.com).
