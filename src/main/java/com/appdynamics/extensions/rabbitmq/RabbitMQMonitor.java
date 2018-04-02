@@ -63,13 +63,10 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else{
                     info.setDisplayName((String) instance.get("displayName"));
                 }
-                if(!Strings.isNullOrEmpty((String) instance.get("host"))){
-                    info.setHost((String) instance.get("host"));
-                }
-                else{
-                    //#TODO This should not default to localhost, it should have an assert not null because localhost is not optional
-                    info.setHost("localhost");
-                }
+
+                AssertUtils.assertNotNull(instances, "The 'host name is not initialised");
+                info.setHost((String) instance.get("host"));
+
                 if(!Strings.isNullOrEmpty((String) instance.get("username"))){
                     info.setUsername((String) instance.get("username"));
                 }
@@ -94,13 +91,10 @@ public class RabbitMQMonitor extends ABaseMonitor {
                         throw new IllegalArgumentException(msg);
                     }
                 }
-                if(instance.get("port")!=null){
-                    info.setPort((Integer) instance.get("port"));
-                }
-                else{
-                    //#TODO This should not default to 15762, this should have an assert not null as the port is mandatory
-                    info.setPort(15672);
-                }
+
+                AssertUtils.assertNotNull(instance.get("port"), "The 'port' in config.yml is not initialised");
+                info.setPort((Integer) instance.get("port"));
+
                 if(instance.get("useSSL")!=null){
                     info.setUseSSL((Boolean) instance.get("useSSL"));
                 }
