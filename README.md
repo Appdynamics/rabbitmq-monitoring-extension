@@ -149,7 +149,7 @@ For any support related questions, you can also contact help@appdynamics.com.
 
 ## Contributing
 
-Always feel free to fork and contribute any changes directly here on GitHub.
+Always feel free to fork and contribute any changes directly here on [GitHub](https://github.com/Appdynamics/rabbitmq-monitoring-extension/).
 
 ## Version
 |          Name            |  Version   |
