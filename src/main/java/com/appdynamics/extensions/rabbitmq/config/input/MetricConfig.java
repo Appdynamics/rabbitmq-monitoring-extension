@@ -7,6 +7,7 @@
 
 package com.appdynamics.extensions.rabbitmq.config.input;
 
+import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +16,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import java.math.BigDecimal;
+import java.util.Map;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 public class MetricConfig {
@@ -36,6 +38,9 @@ public class MetricConfig {
     private BigDecimal multiplier;
     @XmlElement(name="isBoolean")
     private String isBoolean= "false";
+    @XmlElement(name = "convert")
+    private MetricConverter[] convert;
+
 
     public String getAttr() {
         return attr;
@@ -99,5 +104,24 @@ public class MetricConfig {
 
     public void setClusterRollUpType(String clusterRollUpType) {
         this.clusterRollUpType = clusterRollUpType;
+    }
+
+    public Map<String, String> getConvert() {
+        Map<String, String> converterMap = Maps.newHashMap();
+        if(convert!=null && convert.length > 0) {
+            return generateConverterMap(converterMap);
+        }
+        return converterMap;
+    }
+
+    private Map<String, String> generateConverterMap(Map<String, String> converterMap) {
+        for(MetricConverter converter : convert) {
+            converterMap.put(converter.getLabel(), converter.getValue());
+        }
+        return converterMap;
+    }
+
+    public void setConvert(MetricConverter[] convert) {
+        this.convert = convert;
     }
 }
