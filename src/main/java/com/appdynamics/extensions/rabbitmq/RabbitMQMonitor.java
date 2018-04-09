@@ -67,13 +67,9 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 AssertUtils.assertNotNull(instances, "The 'host name is not initialised");
                 info.setHost((String) instance.get("host"));
 
-                if(!Strings.isNullOrEmpty((String) instance.get("username"))){
-                    info.setUsername((String) instance.get("username"));
-                }
-                else{
-                    //#TODO This should not default to guest, what if the host does not need a username and password?
-                    info.setUsername("guest");
-                }
+                AssertUtils.assertNotNull(instances, "The 'username is not initialised");
+                info.setHost((String) instance.get("username"));
+
 
                 if(!Strings.isNullOrEmpty((String) instance.get("password"))){
                     info.setPassword((String) instance.get("password"));
