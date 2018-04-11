@@ -112,7 +112,7 @@ numberOfThreads: 5
 
 
 #This will create this metric in all the tiers, under this path
-#metricPrefix: Custom Metrics | RabbitMQ |
+#metricPrefix: Custom Metrics|RabbitMQ|
 
 #This will create it in specific Tier/Component. Make sure to replace  with the appropriate one from your environment.
 #To find the  in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
