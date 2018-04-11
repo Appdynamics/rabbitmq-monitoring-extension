@@ -1,0 +1,117 @@
+<!--
+  ~ Copyright 2018. AppDynamics LLC and its affiliates.
+  ~ All Rights Reserved.
+  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  -->
+
+<!--
+aggregationType = AVERAGE | SUM | OBSERVATION
+timeRollUpType = AVERAGE | SUM | CURRENT
+clusterRollUpType = INDIVIDUAL | COLLECTIVE
+-->
+<!--
+Set delta = true for metric to report per-min data
+-->
+<stats>
+    <!-- Items in Nodes|<node> - data looked up from /api/nodes nodeDataMetric-->
+    <stat url="/api/nodes" alias="Nodes" filter-name="nodes" children="entries">
+        <naming use-entry-name="true"/>
+        <metric attr="proc_used" alias="Erlang Processes" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="disk_free_alarm" alias="Disk Free Alarm Activated" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="mem_alarm" alias="Memory Free Alarm Activated" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="fd_used" alias="File Descriptors" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="mem_used" alias="Memory(MB)" multiplier="9.54e-7" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+        <metric attr="sockets_used" alias="Sockets" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="channels_count" alias="Channels|Count" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="channels_blocked" alias="Channels|Blocked" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="summary_channels" alias="Summary|Channels" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+        <metric attr="consumers" alias="Summary|Consumers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+
+        <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats-->
+        <stat url="/api/queues" children="entries" alias="Queues" filter-name="queues">
+
+            <stat alias="Messages" name="queueMessageStatsProps">
+                <metric attr="ack" alias="Acknowledged" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="ack" alias="Acknowledged Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="deliver_get" alias="Delivered (Total)" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="deliver_get" alias="Delivered (Total) Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="deliver" alias="Delivered" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="deliver" alias="Delivered Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="deliver_no_ack" alias="Delivered No-Ack" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="deliver_no_ack" alias="Delivered No-Ack Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="get" alias="Got" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="get" alias="Got Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="get_no_ack" alias="Got No-Ack" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="get_no_ack" alias="Got No-Ack Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="publish" alias="Published" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="publish" alias="Published Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="redeliver" alias="Redelivered" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="redeliver" alias="Redelivered Per Min" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+            </stat>
+
+            <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues-->
+            <stat name="queueMessageProps" children="entries" alias="Messages">
+                <metric attr="messages_ready" alias="Available" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+            </stat>
+
+            <!-- Items in Queues|<host>|<QName>|Replication - data looked up from /api/queues-->
+            <stat name="queueReplicationCountsProps" children="entries" alias="Replication">
+                <metric attr="slave_nodes" alias="Slaves Count" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="synchronised_slave_nodes" alias="Synchronized Slaves Count" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="down_slave_nodes" alias="Down Slaves Count" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            </stat>
+
+            <!-- Items in Summary|Messages - data looked up from /api/queues-->
+            <stat name="queueSummaryProps" alias="QueuesSummary">
+                <metric attr="messages_ready" alias="Available" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="deliver_get" alias="Delivered (Total)" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="publish" alias="Published" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="redeliver" alias="Redelivered" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE" delta="true"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            </stat>
+        </stat>
+
+        <!-- Items in Nodes|<node>|Messages - data looked up from /api/channels-->
+        <stat url="/api/channels" name="channelNodeMessageProps" children="entries" alias="Channels">
+            <metric attr="ack" alias="Acknowledged" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="deliver" alias="Delivered" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="deliver_no_ack" alias="Delivered No-Ack" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="get_no_ack" alias="Got No-Ack" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="publish" alias="Published" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="redeliver" alias="Redelivered" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+        </stat>
+
+
+        <!-- Items in Clusters|<Cluster>|Queues - data looked up from /api/overview-->
+        <stat url="/api/overview" children="entries" alias="Clusters">
+            <stat url="queue_totals" children="entries" alias="Queues|">
+                <metric attr="messages" alias = "Messages" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="messages_ready" alias="Available" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Messages - data looked up from /api/overview-->
+            <stat url="message_stats" children="entries" alias="Messages|">
+                <metric attr="publish" alias="Published" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="deliver_get" alias="Delivered (Total)" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="ack" alias="Acknowledged" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="get" alias="Got" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Objects - data looked up from /api/overview-->
+            <stat url="object_totals" children="entries" alias="Objects|">
+                <metric attr="consumers" alias="Consumers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="queues" alias="queues" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="exchanges" alias="exchanges" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="connections" alias="connections" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+                <metric attr="channels" alias="channels" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "INDIVIDUAL"/>
+            </stat>
+        </stat>
+    </stat>
+
+    <stat url="/api/federation-links" alias="FederationLinks">
+    </stat>
+
+</stats>

@@ -55,7 +55,18 @@
             "deliver_get": 44,
             "deliver_get_details": {
                 "rate": 0.0
-            }
+            },
+            "redeliver":0,
+            "redeliver_details":{"rate":0.0
+            },
+            "deliver_no_ack_details":{"rate":0.0},
+            "deliver_no_ack":0,
+            "deliver_details":{"rate":0.0},
+            "deliver":94,
+            "get_no_ack_details":{"rate":0.0},
+            "get_no_ack":0,
+            "get_details":{"rate":0.0},
+            "get":0
         },
         "idle_since": "2017-07-07 19:35:17",
         "transactional": false,

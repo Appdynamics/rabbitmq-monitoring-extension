@@ -1,6 +1,12 @@
-package com.appdynamics.extensions.rabbitmq;
+/*
+ * Copyright 2018. AppDynamics LLC and its affiliates.
+ * All Rights Reserved.
+ * This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+ * The copyright notice above does not evidence any actual or intended publication of such source code.
+ */
 
-import com.appdynamics.extensions.rabbitmq.conf.QueueGroup;
+package com.appdynamics.extensions.rabbitmq.queueGroup;
+
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
@@ -11,7 +17,7 @@ import java.util.Map;
  * Created by abey.tom on 9/16/14.
  */
 public class GroupStatTracker {
-    public static final Logger logger = Logger.getLogger("com.singularity.extensions.rabbitmq.GroupStatTracker");
+    public static final Logger logger = Logger.getLogger(GroupStatTracker.class);
 
     private Map<String, GroupStat> groupStatMap;
     private QueueGroup[] queueGroups;

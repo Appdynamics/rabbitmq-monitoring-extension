@@ -1,0 +1,109 @@
+<!--
+  ~ Copyright 2018. AppDynamics LLC and its affiliates.
+  ~ All Rights Reserved.
+  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  -->
+
+<!--
+aggregationType = AVERAGE | SUM | OBSERVATION
+timeRollUpType = AVERAGE | SUM | CURRENT
+clusterRollUpType = INDIVIDUAL | COLLECTIVE
+-->
+<!--
+Set delta = true for metric to report per-min data
+-->
+<stats>
+    <!-- Items in Nodes|<node> - data looked up from /api/nodes nodeDataMetric-->
+    <stat url="/api/nodes" alias="Nodes" filter-name="nodes" children="entries">
+        <naming use-entry-name="true"/>
+        <metric attr="proc_used" alias="Erlang Processes"/>
+        <metric attr="disk_free_alarm" alias="Disk Free Alarm Activated"/>
+        <metric attr="mem_alarm" alias="Memory Free Alarm Activated"/>
+        <metric attr="fd_used" alias="File Descriptors"/>
+        <metric attr="mem_used" alias="Memory(MB)" multiplier="9.54e-7"/>
+        <metric attr="sockets_used" alias="Sockets"/>
+        <metric attr="channels_count" alias="Channels|Count"/>
+        <metric attr="channels_blocked" alias="Channels|Blocked"/>
+        <metric attr="summary_channels" alias="Summary|Channels"/>
+        <metric attr="consumers" alias="Summary|Consumers"/>
+
+        <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats-->
+        <stat url="/api/queues" children="entries" alias="Queues" filter-name="queues">
+
+            <stat alias="Messages" name="queueMessageStatsProps">
+                <metric attr="ack" alias="Acknowledged"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="deliver" alias="Delivered"/>
+                <metric attr="deliver_no_ack" alias="Delivered No-Ack"/>
+                <metric attr="get" alias="Got"/>
+                <metric attr="get_no_ack" alias="Got No-Ack"/>
+                <metric attr="publish" alias="Published"/>
+                <metric attr="redeliver" alias="Redelivered"/>
+            </stat>
+
+            <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues-->
+            <stat name="queueMessageProps" children="entries" alias="Messages">
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            </stat>
+
+            <!-- Items in Queues|<host>|<QName>|Replication - data looked up from /api/queues-->
+            <stat name="queueReplicationCountsProps" children="entries" alias="Replication">
+                <metric attr="slave_nodes" alias="Slaves Count"/>
+                <metric attr="synchronised_slave_nodes" alias="Synchronized Slaves Count"/>
+                <metric attr="down_slave_nodes" alias="Down Slaves Count"/>
+            </stat>
+
+            <!-- Items in Summary|Messages - data looked up from /api/queues-->
+            <stat name="queueSummaryProps" alias="QueuesSummary">
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="publish" alias="Published"/>
+                <metric attr="redeliver" alias="Redelivered"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            </stat>
+        </stat>
+
+        <!-- Items in Nodes|<node>|Messages - data looked up from /api/channels-->
+        <stat url="/api/channels" name="channelNodeMessageProps" children="entries" alias="Channels">
+            <metric attr="ack" alias="Acknowledged"/>
+            <metric attr="deliver" alias="Delivered"/>
+            <metric attr="deliver_no_ack" alias="Delivered No-Ack"/>
+            <metric attr="get_no_ack" alias="Got No-Ack"/>
+            <metric attr="publish" alias="Published"/>
+            <metric attr="redeliver" alias="Redelivered"/>
+        </stat>
+
+
+        <!-- Items in Clusters|<Cluster>|Queues - data looked up from /api/overview-->
+        <stat url="/api/overview" children="entries" alias="Clusters">
+            <stat url="queue_totals" children="entries" alias="Queues|">
+                <metric attr="messages" alias = "Messages"/>
+                <metric attr="messages_ready" alias="Available"/>
+                <metric attr="messages_unacknowledged" alias="Pending Acknowledgements"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Messages - data looked up from /api/overview-->
+            <stat url="message_stats" children="entries" alias="Messages|">
+                <metric attr="publish" alias="Published"/>
+                <metric attr="deliver_get" alias="Delivered (Total)"/>
+                <metric attr="ack" alias="Acknowledged"/>
+                <metric attr="get" alias="Got"/>
+            </stat>
+
+            <!-- Items in Clusters|<Cluster>|Objects - data looked up from /api/overview-->
+            <stat url="object_totals" children="entries" alias="Objects|">
+                <metric attr="consumers" alias="Consumers"/>
+                <metric attr="queues" alias="queues"/>
+                <metric attr="exchanges" alias="exchanges"/>
+                <metric attr="connections" alias="connections"/>
+                <metric attr="channels" alias="channels"/>
+            </stat>
+        </stat>
+    </stat>
+
+    <stat url="/api/federation-links" alias="FederationLinks">
+    </stat>
+
+</stats>

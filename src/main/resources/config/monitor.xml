@@ -1,19 +1,30 @@
+<!--
+  ~ Copyright 2018. AppDynamics LLC and its affiliates.
+  ~ All Rights Reserved.
+  ~ This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+  ~ The copyright notice above does not evidence any actual or intended publication of such source code.
+  -->
+
 <monitor>
-    <name>RabbitMQMonitor</name>
-    <type>managed</type>
-    <description>RabbitMQ Monitoring Extension</description>
-    <monitor-configuration></monitor-configuration>
-    <monitor-run-task>
-        <execution-style>periodic</execution-style>
-        <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
-        <name>RabbitMQ Monitor Run task</name>
-        <display-name>RabbitMQ Monitor Run task</display-name>
-        <description>RabbitMQ Monitor Run task</description>
-        <type>java</type>
-        <execution-timeout-in-secs>60</execution-timeout-in-secs>
-        <java-task>
-            <classpath>rabbitmq-monitoring-extension.jar</classpath>
-            <impl-class>com.appdynamics.extensions.rabbitmq.RabbitMQMonitor</impl-class>
-        </java-task>
-    </monitor-run-task>
+        <name>RabbitMQMonitor</name>
+        <type>managed</type>
+        <description>RabbitMQ Monitoring Extension</description>
+        <monitor-configuration></monitor-configuration>
+        <monitor-run-task>
+                <execution-style>periodic</execution-style>
+                <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
+                <name>RabbitMQ Monitor Run task</name>
+                <display-name>RabbitMQ Monitor Run task</display-name>
+                <description>RabbitMQ Monitor Run task</description>
+                <type>java</type>
+                <execution-timeout-in-secs>60</execution-timeout-in-secs>
+                <task-arguments>
+                        <argument name="config-file" is-required="true" default-value="monitors/RabbitMQMonitor/config.yml" />
+                        <argument name="metric-file" is-required="true" default-value="monitors/RabbitMQMonitor/metrics.xml" />
+                </task-arguments>
+                <java-task>
+                        <classpath>rabbitmq-monitoring-extension.jar</classpath>
+                        <impl-class>com.appdynamics.extensions.rabbitmq.RabbitMQMonitor</impl-class>
+                </java-task>
+        </monitor-run-task>
 </monitor>

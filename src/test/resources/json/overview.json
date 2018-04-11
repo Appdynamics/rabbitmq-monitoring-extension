@@ -54,7 +54,7 @@
   "object_totals": {
     "consumers": 1,
     "queues": 3,
-    "exchanges": 2,
+    "exchanges": 11,
     "connections": 3,
     "channels": 1
   },

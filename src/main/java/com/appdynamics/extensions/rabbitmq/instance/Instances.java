@@ -1,10 +1,18 @@
-package com.appdynamics.extensions.rabbitmq.conf;
+/*
+ * Copyright 2018. AppDynamics LLC and its affiliates.
+ * All Rights Reserved.
+ * This is unpublished proprietary source code of AppDynamics LLC and its affiliates.
+ * The copyright notice above does not evidence any actual or intended publication of such source code.
+ */
+
+package com.appdynamics.extensions.rabbitmq.instance;
+
+import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 
 public class Instances {
 	
 	private QueueGroup[] queueGroups;
 	private InstanceInfo[] instances;
-	private String excludeQueueRegex;
 	public InstanceInfo[] getInstances() {
 		return instances;
 	}
@@ -16,12 +24,6 @@ public class Instances {
 	}
 	public void setQueueGroups(QueueGroup[] queueGroups) {
 		this.queueGroups = queueGroups;
-	}
-	public String getExcludeQueueRegex() {
-		return excludeQueueRegex;
-	}
-	public void setExcludeQueueRegex(String excludeQueueRegex) {
-		this.excludeQueueRegex = excludeQueueRegex;
 	}
 
 }
