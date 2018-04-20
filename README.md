@@ -21,115 +21,101 @@ The extension needs to be able to connect to RabbitMQ in order to collect and se
 3. All metrics to be reported are configured in metrics.xml. Users can remove entries from metrics.xml to stop the metric from reporting.
 4. Restart the Machine Agent
 
-
 Please place the extension in the **"monitors"** directory of your **Machine Agent** installation directory. Do not place the extension in the **"extensions"** directory of your **Machine Agent** installation directory.
 
 ## Configuration
 
-#### Queue Group Configuration
+  1. Configure the "tier" under which the metrics need to be reported. This can be done by changing the value of `<TIER ID>` in
+     metricPrefix: "Server|Component:`<TIER ID>`|Custom Metrics|RabbitMQ".
+     For example,
+     ```
+     metricPrefix: "Server|Component:Extensions tier|Custom Metrics|RabbitMQ"
+     ```
+  2. Configure the RabbitMQ instances by specifying the name(required), host(required), port(required) of the RabbitMQ instance, password (only if authentication enabled),
+     encryptedPassword(only if password encryption required). You can configure multiple instances as follows to report metrics
+     For example,
+     ```
+     servers:
+       - host: "localhost"
+         port: 15672
+         useSSL: false
+         username: "guest"
+         password: "guest"
+         ##passwordEncrypted : Encrypted Password to be used, In this case do not use normal password field as above
+         displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
 
-   The queue can be grouped and the metrics for the group of queues can be collected with this feature. The grouping can be   used for a scenario where there was a large number of Queues(20+) and they were very short lived (hours to couple of days). Another use case if for example, there are 10 queues working on 'order placement' and 5 queues working on 'user notification', then you can create a group for 'order placement' and get the collective stats.
+       - host: "localhost"
+         port: 15673
+         useSSL: false
+         username: "guest"
+         password: "guest"
+         displayName: "displayName2" //The display name to be used for the metrics of this server, mandatory
 
-   This will create a new tree node named "Queue Groups" as a sibling of "Queues". There is a file named "monitors/RabbitMQMonitor/config.yml" where you add the queue configuration.
-You can also exclude one or more queue(s) by supplying a regex to match such queue names. Please take a look at config.yml for detailed information.
+     connection:
+      socketTimeout: 10000
+      connectTimeout: 10000
+     ```
+  3. Configure the encyptionKey for encryptionPasswords(only if password encryption required).
+     For example,
+     ```
+     #Encryption key for Encrypted password.
+     encryptionKey: "axcdde43535hdhdgfiniyy576"
+     ```
+  4. Configure the numberOfThreads
+     For example,
+     If number of servers that need to be monitored is 3, then number of threads required is 5 * 3 = 15
+     ```
+     numberOfThreads: 15
+     ```
+  5. Queue Group Configuration: The queue can be grouped and the metrics for the group of queues can be collected with this feature.
+      The grouping can be used for a scenario where there was a large number of Queues(20+) and they were very short lived (hours to couple
+      of days). Another use case if for example, there are 10 queues working on 'order placement' and 5 queues working on
+      'user notification', then you can create a group for 'order placement' and get the collective stats.
+      The queue stats will be grouped by the 'groupName' if the 'queueNameRegex' matches the name of the Queue.
+      Example:
+      ```
+      queueGroups:
+        # The stats from Queues matched by the 'queueNameRegex' will be reported under groupName
+      - groupName: group1
+        # A Regex to match the Queue Name
+        queueNameRegex: queue.+
+        # showIndividualStats  If set to false then the Individual Queue stats will not be reported.This will help if there are several short lived queues and an explosion of metrics in the controller can be avoided
+        showIndividualStats: false
 
-#### Include Filters
+      - groupName: group2
+        queueNameRegex: temp.+
+        showIndividualStats: true
+        ```
+  6. Include Filters:  Use the regex in includes parameters of filters, to specify the nodes/queues you'd like to collect metrics on.
+     Be default, the config.yml has includes filter set to include all nodes/queues.
+     ```
+     filter:
+       nodes:
+         includes: [".*"]
+       queues:
+         includes: [".*"]
+     ```
+  7. EndPoint Flags:  Use endpoint-flags to enable/disable(set flag to true/false) metrics for overview and federation-plugin of RabbitMQ.
+     ```
+     endpointFlags:
+        federationPlugin: "false"
+        overview: "true"
+     ```
 
-    Use the regex in includes parameters of filters, to specify the nodes/queues you'd like to collect metrics on. Be default, the config.yml has includes filter set to include all nodes/queues.
+## Extension Generic Information
 
-#### EndPoint Flags
-
-    Use endpoint-flags to enable/disable(set flag to true/false) metrics for overview and federation-plugin of RabbitMQ.
-
-#### Instances Configuration
-
-   The extension supports reporting metrics from multiple rabbitMQ instances. Have a look at config.yml for more details.
-
-   Configure the extension by editing the config.yml file in `<MACHINE_AGENT_HOME>/monitors/RabbitMQMonitor/`. Below is the format
-
-
-``` yaml
-####### RabbitMQ Server Instances. You can configure multiple instances as follows to report metrics from #######
-servers:
-   - host: "localhost"
-     port: 15672
-     useSSL: false
-     username: "guest"
-     password: "guest"
-     ##passwordEncrypted : Encrypted Password to be used, In this case do not use normal password field as above
-     displayName: "displayName1" //The display name to be used for the metrics of this server, mandatory
-
-   - host: "localhost"
-     port: 15673
-     useSSL: false
-     username: "guest"
-     password: "guest"
-     displayName: "displayName2" //The display name to be used for the metrics of this server, mandatory
-
-connection:
-  socketTimeout: 10000
-  connectTimeout: 10000
-
-############
-## Queue Group Configuration. The queue stats will be grouped by the 'groupName'
-## if the 'queueNameRegex' matches the name of the Queue.
-
-## groupName            The stats from Queues matched by the 'queueNameRegex' will be reported under this name
-## queueNameRegex       A Regex to match the Queue Name
-## showIndividualStats  If set to false then the Individual Queue stats will not be reported.
-##                      This will help if there are several short lived queues and an explosion of metrics
-##                      in the controller can be avoided
-############
-
-# Uncomment the following lines for configuration
-queueGroups:
-- groupName: group1
-  queueNameRegex: queue.+
-  showIndividualStats: false
-
-# Queue Group Configuration
-#- groupName: group2
-#  queueNameRegex: temp.+
-#  showIndividualStats: false
-
-####Include Filters####
-filter:
-  nodes:
-    includes: [".*"]
-  queues:
-    includes: [".*"]
-###The above regex can be supplied to include metric reporting for nodes/queue names that match this regex###
-
-####End point Flags. Enable/disable federation and overview metrics reporting####
-endpointFlags:
-  federationPlugin: "false"
-  overview: "true"
-
-##encryptionKey: "myKey", the encryption key used to encrypt passowrd(s), same will be used to decrypt`
-
-# number of concurrent tasks
-numberOfThreads: 5
-
-
-#This will create this metric in all the tiers, under this path
-#metricPrefix: Custom Metrics|RabbitMQ|
-
-#This will create it in specific Tier/Component. Make sure to replace  with the appropriate one from your environment.
-#To find the  in your environment, please follow the screenshot https://docs.appdynamics.com/display/PRO42/Build+a+Monitoring+Extension+Using+Java
-metricPrefix: Server|Component:<Component_ID>|Custom Metrics|RabbitMQ|
-```
-## Credentials Encryption
+### Credentials Encryption
 
 Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
 
-## Extensions Workbench
+### Extensions Workbench
 Workbench is an inbuilt feature provided with each extension in order to assist you to fine tune the extension setup before you actually deploy it on the controller. Please review the following document on [How to use the Extensions WorkBench](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-the-Extensions-WorkBench/ta-p/30130)
 
-## Troubleshooting
+### Troubleshooting
 1. Please ensure the RabbitMQ Management Plugin is enabled. Please check "" section of [this page](http://www.rabbitmq.com/management.html) for more details.
 2. Please follow the steps listed in this [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) in order to troubleshoot your issue. These are a set of common issues that customers might have faced during the installation of the extension. If these don't solve your issue, please follow the last step on the [troubleshooting-document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) to contact the support team.
 
-## Support Tickets
+### Support Tickets
 If after going through the [Troubleshooting Document](https://community.appdynamics.com/t5/Knowledge-Base/How-to-troubleshoot-missing-custom-metrics-or-extensions-metrics/ta-p/28695) you have not been able to get your extension working, please file a ticket and add the following information.
 
 Please provide the following in order for us to assist you better.
@@ -147,11 +133,11 @@ For any support related questions, you can also contact help@appdynamics.com.
 
 
 
-## Contributing
+### Contributing
 
 Always feel free to fork and contribute any changes directly here on [GitHub](https://github.com/Appdynamics/rabbitmq-monitoring-extension/).
 
-## Version
+### Version
 |          Name            |  Version   |
 |--------------------------|------------|
 |Extension Version         |2.0.0       |
