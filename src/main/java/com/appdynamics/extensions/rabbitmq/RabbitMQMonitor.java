@@ -68,7 +68,7 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 info.setHost((String) instance.get("host"));
 
                 AssertUtils.assertNotNull(instances, "The 'username is not initialised");
-                info.setHost((String) instance.get("username"));
+                info.setUsername((String) instance.get("username"));
 
 
                 if(!Strings.isNullOrEmpty((String) instance.get("password"))){
