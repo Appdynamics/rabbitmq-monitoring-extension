@@ -225,7 +225,7 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Summary|Messages|Available", "0");
         expectedValueMap.put("Summary|Messages|Redelivered", "25");
         expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("Server2|HeartBeat","1");
+        expectedValueMap.put("|HeartBeat","1");
     }
 
 

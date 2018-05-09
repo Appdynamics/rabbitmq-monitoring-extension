@@ -50,7 +50,7 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
         this.configuration = serviceProvider.getMonitorConfiguration();
         this.instanceInfo = instanceInfo;
         this.metricWriter = serviceProvider.getMetricWriteHelper();
-        this.metricPrefix = configuration.getMetricPrefix();
+        this.metricPrefix = configuration.getMetricPrefix() + "|" + instanceInfo.getDisplayName();
         this.endpointFlagsMap = (Map<String, String>) configuration.getConfigYml().get("endpointFlags");
         this.displayName = instanceInfo.getDisplayName();
         this.queueGroups = queueGroups;
