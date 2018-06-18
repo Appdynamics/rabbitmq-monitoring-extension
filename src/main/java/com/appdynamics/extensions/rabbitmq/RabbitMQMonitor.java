@@ -19,10 +19,19 @@ import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.AssertUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
+import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.PatternLayout;
 import org.slf4j.LoggerFactory;
 
+import java.io.OutputStreamWriter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RabbitMQMonitor extends ABaseMonitor {
 
@@ -146,5 +155,4 @@ public class RabbitMQMonitor extends ABaseMonitor {
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
         return instances.size();
     }
-
 }

@@ -182,8 +182,6 @@ public class MetricsCollectorTest {
 
     private void initExpectedQueueMetrics() {
         expectedValueMap.put("Queues|Default|node1q1|Consumers", "1");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "0");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Acknowledged", "8");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered (Total)", "20");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Delivered", "18");
@@ -192,17 +190,11 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
-        expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
         expectedValueMap.put("Summary|Queues", "2");
 
 
 
         expectedValueMap.put("Queues|Default|node2q2|Consumers", "1");
-        expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "0");
-        expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "0");
-        expectedValueMap.put("Queues|Default|node2q2|Messages|Acknowledged", "0");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered (Total)", "3");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered", "3");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Delivered No-Ack", "1");
@@ -210,9 +202,6 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queues|Default|node2q2|Messages|Got No-Ack", "1");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Published", "4");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered", "3");
-        expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count", "0");
-        expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count", "0");
 
     }
 
@@ -222,9 +211,7 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Summary|Queues", "2");
         expectedValueMap.put("Summary|Messages|Delivered (Total)", "20");
         expectedValueMap.put("Summary|Messages|Published", "30");
-        expectedValueMap.put("Summary|Messages|Available", "0");
         expectedValueMap.put("Summary|Messages|Redelivered", "25");
-        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "0");
         expectedValueMap.put("|HeartBeat","1");
     }
 
@@ -236,11 +223,9 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Published", "34");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Delivered No-Ack", "21");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Got", "6");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "0");
         expectedValueMap.put("Queue Groups|Default|group1|Consumers", "2");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "8");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "13");
-        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "0");
     }
 
     private void initExpectedNodeMetrics() {
@@ -251,18 +236,13 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Nodes|rabbit@rabbit1|Sockets", "3");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered", "94");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Acknowledged", "24");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "0");
+        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Consumers|Count", "1");
         expectedValueMap.put("Nodes|rabbit@rabbit1|File Descriptors", "26");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Got No-Ack", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Delivered No-Ack", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Redelivered", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Published", "0");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Available", "36");
         expectedValueMap.put("Nodes|rabbit@rabbit1|Messages|Pending Acknowledgements", "50");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Count", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Channels", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Summary|Consumers", "0");
-        expectedValueMap.put("Nodes|rabbit@rabbit1|Channels|Blocked", "0");
     }
 
     private void validateMetrics(){

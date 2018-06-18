@@ -107,7 +107,7 @@ public class MetricsCollectorUtil {
 
     protected BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
         BigInteger value = getBigIntegerValue(propName, node);
-        return value != null ? value : new BigInteger(String.valueOf(defaultVal));
+        return value;
     }
 
     protected String lower(String value) {

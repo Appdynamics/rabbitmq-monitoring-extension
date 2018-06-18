@@ -10,23 +10,15 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 import com.appdynamics.extensions.conf.MonitorConfiguration;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.MetricConfig;
-import com.appdynamics.extensions.rabbitmq.config.input.Naming;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
-import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
-import com.appdynamics.extensions.util.JsonUtils;
 import com.appdynamics.extensions.util.StringUtils;
-import com.google.common.base.Strings;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -128,10 +120,11 @@ public class MetricDataParser {
                     Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
 
                     BigInteger value = util.getMetricValue(metricConfig.getAttr(), node, metricConfig.isBoolean());
-                    String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
-                    Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + prefix + metricName, propertiesMap);
-                    metrics.add(metric);
-
+                    if(value!=null) {
+                        String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
+                        Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + prefix + metricName, propertiesMap);
+                        metrics.add(metric);
+                    }
                 }
             }
 

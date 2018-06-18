@@ -15,7 +15,6 @@ import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
-import com.sun.javafx.font.Metrics;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -130,5 +129,4 @@ public class MetricsCollector implements Runnable {
             phaser.arriveAndDeregister();
         }
     }
-
 }

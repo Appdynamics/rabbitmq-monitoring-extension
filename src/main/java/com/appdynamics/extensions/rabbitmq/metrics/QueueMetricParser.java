@@ -15,8 +15,6 @@ import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStat;
 import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStatTracker;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
-import com.google.common.base.Strings;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -78,6 +76,7 @@ public class QueueMetricParser {
             boolean summaryStat = false;
 
             Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
+            Map<String, Map<String, String>> metricPropertiesMap = new HashMap<String, Map<String, String>>();
 
             GroupStatTracker tracker = new GroupStatTracker(queueGroups);
             for (JsonNode queue : queues) {
@@ -105,7 +104,7 @@ public class QueueMetricParser {
                 String groupPrefix = "Queue Groups|" + vHost + "|" + groupStat.getGroupName() + "|";
                 BigInteger consumers = util.getMetricValue("consumers", queue, "false");
 
-                if(showIndividualStats) {
+                if(showIndividualStats && consumers!=null) {
                     Metric metric = new Metric("Consumers", String.valueOf(consumers), metricPrefix + prefix + "Consumers");
                     metrics.add(metric);
                 }
@@ -129,13 +128,13 @@ public class QueueMetricParser {
                         Map<String, String> propertiesMap = oMapper.convertValue(metricConfig, Map.class);
                         BigInteger value = util.getMetricValue(metricConfig.getAttr(), queue.get("message_stats"), metricConfig.isBoolean());
                         String metricName = StringUtils.hasText(stat.getAlias()) ? metricConfig.getAlias() : metricConfig.getAttr();
-                        if (showIndividualStats) {
+                        if (showIndividualStats && value!=null) {
                             Metric metric = new Metric(metricName, String.valueOf(value), metricPrefix + statPrefix + metricName, propertiesMap);
                             metrics.add(metric);
                         }
-                        if(!("Replication".equalsIgnoreCase(childStat.getAlias())) && !("QueuesSummary".equalsIgnoreCase(childStat.getAlias()))) {
+                        if(!("Replication".equalsIgnoreCase(childStat.getAlias())) && !("QueuesSummary".equalsIgnoreCase(childStat.getAlias())) && value!=null) {
                             groupStat.add(statGroupPrefix + metricConfig.getAlias(), value);
-                            groupStat.setMetricPropertiesMap(propertiesMap);
+                            metricPropertiesMap.put(statGroupPrefix + metricConfig.getAlias(),propertiesMap);
                             util.addToMap(valueMap, statGroupPrefix + metricConfig.getAlias(), value);
                         }
                     }
@@ -151,7 +150,7 @@ public class QueueMetricParser {
                 for (GroupStat groupStat : groupStats) {
                     Map<String, BigInteger> groupValMap = groupStat.getValueMap();
                     for (String metricVal : groupValMap.keySet()) {
-                        metric = new Metric(metricVal, String.valueOf(groupValMap.get(metricVal)), metricPrefix + metricVal, groupStat.getMetricPropertiesMap());
+                        metric = new Metric(metricVal, String.valueOf(groupValMap.get(metricVal)), metricPrefix + metricVal, metricPropertiesMap.get(metricVal)!=null ? metricPropertiesMap.get(metricVal) : new HashMap<String, String>());
                         metrics.add(metric);
                     }
                 }

@@ -20,7 +20,7 @@ public class GroupStat {
     private boolean showIndividualStats;
 
     private Map<String, BigInteger> valueMap;
-    private Map<String, String> metricPropertiesMap;
+    private Map<String, Map<String, String>> metricPropertiesMap;
     private Map<String, Boolean> collectDeltaMap;
 
     protected GroupStat() {
@@ -32,7 +32,7 @@ public class GroupStat {
         this.groupName = groupName;
         this.showIndividualStats = showIndividualStats;
         valueMap = new HashMap<String, BigInteger>();
-        metricPropertiesMap = new HashMap<String, String>();
+        metricPropertiesMap = new HashMap<String, Map<String, String>>();
         collectDeltaMap = new HashMap<String, Boolean>();
     }
 
@@ -59,17 +59,11 @@ public class GroupStat {
         }
     }
 
-    public void setMetricPropertiesMap(Map<String, String> properties){
-        if(metricPropertiesMap !=null) {
-            metricPropertiesMap.putAll(properties);
-        }
-    }
-
     public Map<String, BigInteger> getValueMap() {
         return valueMap;
     }
 
-    public Map<String, String> getMetricPropertiesMap() {
+    public Map<String, Map<String,String>> getMetricPropertiesMap() {
         return metricPropertiesMap;
     }
 
