@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##20.01 - Oct 23, 2018
+1. Phaser bug fix.
+
 ##2.0.0 - Mar 20, 2018
 1. Moved Rabbit Mq to 2.0.0 framework
 2. Moved metrics configurations from config.yml to metrics.xml
