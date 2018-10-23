@@ -102,8 +102,6 @@ Please place the extension in the **"monitors"** directory of your **Machine Age
         overview: "true"
      ```
 
-## Extension Generic Information
-
 ### Credentials Encryption
 
 Please visit [this page](https://community.appdynamics.com/t5/Knowledge-Base/How-to-use-Password-Encryption-with-Extensions/ta-p/29397) to get detailed instructions on password encryption. The steps in this document will guide you through the whole process.
