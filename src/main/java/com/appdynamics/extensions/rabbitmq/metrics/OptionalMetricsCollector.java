@@ -80,7 +80,7 @@ public class OptionalMetricsCollector implements Runnable {
                 metricWriteHelper.transformAndPrintMetrics(metrics);
             }
         }catch(Exception e){
-            logger.error("OptionalMetricsCollector error: " + e.getMessage());
+            logger.error("OptionalMetricsCollector error: ", e);
         }finally {
             logger.debug("MetircsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();

@@ -27,6 +27,10 @@ Set delta = true for metric to report per-min data
         <metric attr="channels_blocked" alias="Channels|Blocked" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
         <metric attr="summary_channels" alias="Summary|Channels" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
         <metric attr="consumers" alias="Summary|Consumers" aggregationType = "AVERAGE" timeRollUpType = "AVERAGE" clusterRollUpType = "COLLECTIVE"/>
+            <metric attr="running" alias="running" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE" isBoolean = "true">
+            <convert str="false" value="0"/>
+            <convert str="true" value="1"/>
+        </metric>
 
         <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues/message_stats-->
         <stat url="/api/queues" children="entries" alias="Queues" filter-name="queues">
@@ -53,6 +57,7 @@ Set delta = true for metric to report per-min data
             <!-- Items in Queues|<host>|<QName>|Messages - data looked up from /api/queues-->
             <stat name="queueMessageProps" children="entries" alias="Messages">
                 <metric attr="messages_ready" alias="Available" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
+                <metric attr="messages" alias="Total Messages" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
                 <metric attr="messages_unacknowledged" alias="Pending Acknowledgements" aggregationType = "OBSERVATION" timeRollUpType = "CURRENT" clusterRollUpType = "COLLECTIVE"/>
             </stat>
 
