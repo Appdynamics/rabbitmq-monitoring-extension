@@ -36,8 +36,8 @@ public class MetricConfig {
     private String clusterRollUpType;
     @XmlAttribute
     private BigDecimal multiplier;
-    @XmlElement(name="isBoolean")
-    private String isBoolean= "false";
+    @XmlAttribute(name="isBoolean")
+    private String isBoolean = "false";
     @XmlElement(name = "convert")
     private MetricConverter[] convert;
 

@@ -122,7 +122,7 @@ public class MetricsCollector implements Runnable {
             }
         }
         catch(Exception e){
-            logger.error("MetricsCollector error: " + e.getMessage());
+            logger.error("MetricsCollector error: " , e);
             metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + "|HeartBeat"));
         }finally {
             logger.debug("MetricsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
