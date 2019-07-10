@@ -27,6 +27,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -146,7 +147,6 @@ public class MetricsCollectorTest {
                 , expectedValueMap.isEmpty());
     }
 
-
     @Test
     public void testWithGroupsWithIndividual() throws TaskExecutionException {
         expectedValueMap = new HashMap<String, String>();
@@ -190,6 +190,12 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queues|Default|node1q1|Messages|Got No-Ack", "12");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Published", "30");
         expectedValueMap.put("Queues|Default|node1q1|Messages|Redelivered", "25");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Available", "36");
+        expectedValueMap.put("Queues|Default|node1q1|Messages|Pending Acknowledgements", "50");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Slaves Count", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Synchronized Slaves Count", "0");
+        expectedValueMap.put("Queues|Default|node1q1|Replication|Down Slaves Count", "0");
+
         expectedValueMap.put("Summary|Queues", "2");
 
 
@@ -202,6 +208,11 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queues|Default|node2q2|Messages|Got No-Ack", "1");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Published", "4");
         expectedValueMap.put("Queues|Default|node2q2|Messages|Redelivered", "3");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Available", "1");
+        expectedValueMap.put("Queues|Default|node2q2|Messages|Pending Acknowledgements", "2");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Slaves Count", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Synchronized Slaves Count", "0");
+        expectedValueMap.put("Queues|Default|node2q2|Replication|Down Slaves Count", "0");
 
     }
 
@@ -212,6 +223,8 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Summary|Messages|Delivered (Total)", "20");
         expectedValueMap.put("Summary|Messages|Published", "30");
         expectedValueMap.put("Summary|Messages|Redelivered", "25");
+        expectedValueMap.put("Summary|Messages|Available", "36");
+        expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "50");
         expectedValueMap.put("|HeartBeat","1");
     }
 
@@ -226,6 +239,9 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Queue Groups|Default|group1|Consumers", "2");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Acknowledged", "8");
         expectedValueMap.put("Queue Groups|Default|group1|Messages|Got No-Ack", "13");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Pending Acknowledgements", "52");
+        expectedValueMap.put("Queue Groups|Default|group1|Messages|Available", "37");
+
     }
 
     private void initExpectedNodeMetrics() {
