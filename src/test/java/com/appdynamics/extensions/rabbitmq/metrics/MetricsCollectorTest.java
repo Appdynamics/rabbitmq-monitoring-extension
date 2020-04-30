@@ -10,21 +10,22 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 import com.appdynamics.extensions.AMonitorJob;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.http.HttpClientUtils;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
+import com.appdynamics.extensions.util.YmlUtils;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -38,6 +39,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -75,9 +77,9 @@ public class MetricsCollectorTest {
 
     private MetricsCollector metricsCollectorTask;
 
-    private MonitorConfiguration monitorConfiguration = new MonitorConfiguration("RabbitMQ", "Custom Metrics|RabbitMQ|", Mockito.mock(AMonitorJob.class));
+    private MonitorContextConfiguration monitorConfiguration = new MonitorContextConfiguration("RabbitMQ", "Custom Metrics|RabbitMQ|", new File(""), Mockito.mock(AMonitorJob.class));
 
-    public static final Logger logger = Logger.getLogger(MetricsCollectorTest.class);
+    public static final Logger logger = ExtensionsLoggerFactory.getLogger(MetricsCollectorTest.class);
 
     private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));;
 
@@ -85,22 +87,27 @@ public class MetricsCollectorTest {
 
     private List<Metric> metrics = new ArrayList<Metric>();
 
+    private Map nodeFilters;
+
+    private Map queueFilters;
 
     @Before
     public void before(){
 
         monitorConfiguration.setConfigYml("src/test/resources/test-config.yml");
-        monitorConfiguration.setMetricsXml("src/test/resources/test-metrics.xml", Stat.Stats.class);
+        monitorConfiguration.setMetricXml("src/test/resources/test-metrics.xml", Stat.Stats.class);
 
-        Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
         Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
 
-        stat = (Stat.Stats) monitorConfiguration.getMetricsXmlConfiguration();
+        stat = (Stat.Stats) monitorConfiguration.getMetricsXml();
 
-        dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
+        queueFilters = (Map) YmlUtils.getNestedObject(monitorConfiguration.getConfigYml(), "filter", "queues");
 
-        metricsCollectorTask = Mockito.spy(new MetricsCollector(stat.getStats()[0],monitorConfiguration, instances.getInstances()[0], metricWriter,
-                 "true", dataParser, instances.getQueueGroups(), phaser));
+        nodeFilters = (Map) YmlUtils.getNestedObject(monitorConfiguration.getConfigYml(), "filter", "nodes");
+        dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration, nodeFilters));
+
+        metricsCollectorTask = Mockito.spy(new MetricsCollector(stat.getStats()[0],monitorConfiguration.getContext(), instances.getInstances()[0], metricWriter,
+                 "true", dataParser, instances.getQueueGroups(), queueFilters, phaser));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
         PowerMockito.mockStatic(HttpClientUtils.class);

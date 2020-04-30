@@ -8,15 +8,16 @@
 package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.http.UrlBuilder;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
-import org.codehaus.jackson.node.ArrayNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,11 +25,11 @@ import java.util.concurrent.Phaser;
 
 public class OptionalMetricsCollector implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(OptionalMetricsCollector.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(OptionalMetricsCollector.class);
 
     private Stat stat;
 
-    private MonitorConfiguration configuration;
+    private MonitorContext context;
 
     private InstanceInfo instanceInfo;
 
@@ -52,10 +53,10 @@ public class OptionalMetricsCollector implements Runnable {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public OptionalMetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser, String federationFlag, Phaser phaser){
+    public OptionalMetricsCollector(Stat stat, MonitorContext context, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper, MetricDataParser dataParser, String federationFlag, Phaser phaser){
 
         this.stat = stat;
-        this.configuration = configuration;
+        this.context = context;
         this.instanceInfo = instanceInfo;
         this.metricWriteHelper = metricWriteHelper;
         this.dataParser = dataParser;
@@ -69,7 +70,7 @@ public class OptionalMetricsCollector implements Runnable {
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(stat.getUrl()).build();
             logger.debug("Running Optional Metrics Collection task for url: " + url);
 
-            ArrayNode optionalJson = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+            ArrayNode optionalJson = HttpClientUtils.getResponseAsJson(this.context.getHttpClient(), url, ArrayNode.class);
             if (stat.getAlias().equalsIgnoreCase("FederationLinks") && federationFlag.equalsIgnoreCase("true")) {
                 metrics.addAll(dataParser.parseFederationData(optionalJson));
             } else {

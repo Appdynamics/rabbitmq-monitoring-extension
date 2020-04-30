@@ -7,7 +7,9 @@
 
 package com.appdynamics.extensions.rabbitmq.queueGroup;
 
-import org.apache.log4j.Logger;
+
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
+import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -17,7 +19,7 @@ import java.util.Map;
  * Created by abey.tom on 9/16/14.
  */
 public class GroupStatTracker {
-    public static final Logger logger = Logger.getLogger(GroupStatTracker.class);
+    public static final Logger logger = ExtensionsLoggerFactory.getLogger(GroupStatTracker.class);
 
     private Map<String, GroupStat> groupStatMap;
     private QueueGroup[] queueGroups;

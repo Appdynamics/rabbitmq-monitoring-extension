@@ -10,7 +10,8 @@ package com.appdynamics.extensions.rabbitmq;
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.metrics.MetricDataParser;
@@ -18,16 +19,17 @@ import com.appdynamics.extensions.rabbitmq.metrics.MetricsCollector;
 import com.appdynamics.extensions.rabbitmq.metrics.OptionalMetricsCollector;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
-import org.slf4j.LoggerFactory;
+import com.appdynamics.extensions.util.YmlUtils;
+import org.slf4j.Logger;
 
 import java.util.Map;
 import java.util.concurrent.Phaser;
 
 public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RabbitMQMonitorTask.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(RabbitMQMonitorTask.class);
 
-    private MonitorConfiguration configuration;
+    private MonitorContextConfiguration configuration;
 
     private String displayName;
 
@@ -46,8 +48,8 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
 
 
-    RabbitMQMonitorTask(TasksExecutionServiceProvider serviceProvider, InstanceInfo instanceInfo, QueueGroup[] queueGroups) {
-        this.configuration = serviceProvider.getMonitorConfiguration();
+    RabbitMQMonitorTask(TasksExecutionServiceProvider serviceProvider, MonitorContextConfiguration configuration, InstanceInfo instanceInfo, QueueGroup[] queueGroups) {
+        this.configuration = configuration;
         this.instanceInfo = instanceInfo;
         this.metricWriter = serviceProvider.getMetricWriteHelper();
         this.metricPrefix = configuration.getMetricPrefix() + "|" + instanceInfo.getDisplayName();
@@ -63,21 +65,25 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
             Phaser phaser = new Phaser();
             phaser.register();
 
-            Stat.Stats metricConfig = (Stat.Stats) configuration.getMetricsXmlConfiguration();
+            Stat.Stats metricConfig = (Stat.Stats) configuration.getMetricsXml();
 
-            MetricDataParser dataParser = new MetricDataParser(metricPrefix + "|", configuration);
+            Map nodeFilters = (Map) YmlUtils.getNestedObject(configuration.getConfigYml(), "filter", "nodes");
+
+            MetricDataParser dataParser = new MetricDataParser(metricPrefix + "|", configuration, nodeFilters);
 
             for(Stat stat: metricConfig.getStats()) {
                 if(StringUtils.hasText(stat.getAlias()) && stat.getAlias().equalsIgnoreCase("Nodes")) {
                     phaser.register();
-                    MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration, instanceInfo, metricWriter,
-                             endpointFlagsMap.get("overview"), dataParser, queueGroups, phaser);
-                    configuration.getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
+
+                    Map queueFilters = (Map) YmlUtils.getNestedObject(configuration.getConfigYml(), "filter", "queues");
+                    MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration.getContext(), instanceInfo, metricWriter,
+                             endpointFlagsMap.get("overview"), dataParser, queueGroups, queueFilters, phaser);
+                    configuration.getContext().getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
                     logger.debug("Registering MetricCollectorTask phaser for {}", displayName);
                 }else {
                     phaser.register();
-                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration, instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"), phaser);
-                    configuration.getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
+                    OptionalMetricsCollector optionalMetricsCollectorTask = new OptionalMetricsCollector(stat, configuration.getContext(), instanceInfo, metricWriter, dataParser, endpointFlagsMap.get("federationPlugin"), phaser);
+                    configuration.getContext().getExecutorService().execute("OptionalMetricsCollector", optionalMetricsCollectorTask);
                     logger.debug("Registering OptionalMetricCollectorTask phaser for {}", displayName);
                 }
             }
