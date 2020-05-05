@@ -8,32 +8,33 @@
 package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContext;
 import com.appdynamics.extensions.http.HttpClientUtils;
 import com.appdynamics.extensions.http.UrlBuilder;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Phaser;
 
 
 public class MetricsCollector implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(MetricsCollector.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MetricsCollector.class);
 
     private Stat stat;
 
-    private MonitorConfiguration configuration;
+    private MonitorContext context;
 
     private InstanceInfo instanceInfo;
 
@@ -51,6 +52,8 @@ public class MetricsCollector implements Runnable {
 
     private ArrayNode nodeDataJson;
 
+    private Map queueFilters;
+
     private Phaser phaser;
 
 
@@ -64,16 +67,17 @@ public class MetricsCollector implements Runnable {
         this.metricsCollectorUtil = metricsCollectorUtil;
     }
 
-    public MetricsCollector(Stat stat, MonitorConfiguration configuration, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
-                             String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups, Phaser phaser)
+    public MetricsCollector(Stat stat, MonitorContext context, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
+                            String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups, Map queueFilters, Phaser phaser)
     {
         this.stat = stat;
-        this.configuration = configuration;
+        this.context = context;
         this.instanceInfo = instanceInfo;
         this.metricWriteHelper = metricWriteHelper;
         this.overviewMetricFlag = overviewMetricFlag;
         this.dataParser = dataParser;
         this.queueGroups = queueGroups;
+        this.queueFilters = queueFilters;
         this.phaser = phaser;
     }
 
@@ -84,7 +88,7 @@ public class MetricsCollector implements Runnable {
             String endpoint = stat.getUrl();
             String url = UrlBuilder.builder(metricsCollectorUtil.getUrlParametersMap(instanceInfo)).path(endpoint).build();
             logger.info("Fetching the RabbitMQ Stats from the URL {}", url);
-            nodeDataJson = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+            nodeDataJson = HttpClientUtils.getResponseAsJson(this.context.getHttpClient(), url, ArrayNode.class);
             metrics.addAll(dataParser.parseNodeData(stat, nodeDataJson, objectMapper));
 
             for (Stat childStat : stat.getStats()) {
@@ -97,14 +101,14 @@ public class MetricsCollector implements Runnable {
                     if (childStat.getAlias().equalsIgnoreCase("Clusters")) {
                         logger.debug("Overview metric flag: " + overviewMetricFlag);
                         if (overviewMetricFlag.equalsIgnoreCase("true")) {
-                            json = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, JsonNode.class);
+                            json = HttpClientUtils.getResponseAsJson(this.context.getHttpClient(), url, JsonNode.class);
                         }
                     } else {
-                        json = HttpClientUtils.getResponseAsJson(this.configuration.getHttpClient(), url, ArrayNode.class);
+                        json = HttpClientUtils.getResponseAsJson(this.context.getHttpClient(), url, ArrayNode.class);
                     }
 
                     if (childStat.getAlias().equalsIgnoreCase("Queues")) {
-                        QueueMetricParser queueParser = new QueueMetricParser(childStat, configuration, dataParser.getMetricPrefix(), queueGroups);
+                        QueueMetricParser queueParser = new QueueMetricParser(childStat, context, dataParser.getMetricPrefix(), queueGroups, queueFilters);
                         metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson, objectMapper));
                     } else if (childStat.getAlias().equalsIgnoreCase("Channels")) {
                         ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());

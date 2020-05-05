@@ -1,6 +1,9 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
-##20.01 - Oct 23, 2018
+##2.0.3 - Apr 30, 2020
+1. Moved to commons 2.2.3
+
+##2.0.1 - Oct 23, 2018
 1. Phaser bug fix.
 
 ##2.0.0 - Mar 20, 2018

@@ -8,34 +8,26 @@
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.ABaseMonitor;
-import com.appdynamics.extensions.TaskInputArgs;
+import com.appdynamics.extensions.Constants;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
-import com.appdynamics.extensions.crypto.CryptoUtil;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.AssertUtils;
+import com.appdynamics.extensions.util.CryptoUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
-import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.PatternLayout;
-import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
-import java.io.OutputStreamWriter;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class RabbitMQMonitor extends ABaseMonitor {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RabbitMQMonitor.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(RabbitMQMonitor.class);
     private static final String METRIC_PREFIX = "Custom Metrics|RabbitMQ|";
 
     protected Instances instances = new Instances();
@@ -51,12 +43,6 @@ public class RabbitMQMonitor extends ABaseMonitor {
         return "RabbitMQ Monitor";
     }
 
-
-    @Override
-    protected void initializeMoreStuff(Map<String, String> args, MonitorConfiguration conf) {
-        conf.setMetricsXml(args.get("metric-file"), Stat.Stats.class);
-
-    }
 
     private void initialiseInstances(Map<String, ?> configYml) {
         List<Map<String,?>> instances = (List<Map<String, ?>>) configYml.get("servers");
@@ -86,9 +72,10 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else if(!Strings.isNullOrEmpty((String) instance.get("encryptedPassword"))){
                     try {
                         Map<String, String> args = Maps.newHashMap();
-                        args.put(TaskInputArgs.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
-                        args.put(TaskInputArgs.ENCRYPTION_KEY, (String)configYml.get("encryptionKey"));
-                        info.setPassword(CryptoUtil.getPassword(args));
+                        args.put(Constants.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
+                        args.put(Constants.ENCRYPTION_KEY, (String)configYml.get("encryptionKey"));
+                        logger.debug("Decrypting the encrypted password");
+                        info.setPassword(CryptoUtils.getPassword(args));
 
                     } catch (IllegalArgumentException e) {
                         String msg = "Encryption Key not specified. Please set the value in config.yml.";
@@ -133,26 +120,30 @@ public class RabbitMQMonitor extends ABaseMonitor {
 
     }
 
+    @Override
+    protected void initializeMoreStuff(Map<String, String> args) {
+        this.getContextConfiguration().setMetricXml(args.get("metric-file"), Stat.Stats.class);
+
+    }
 
     @Override
     protected void doRun(TasksExecutionServiceProvider serviceProvider) {
 
-        initialiseInstances(this.configuration.getConfigYml());
+        initialiseInstances(this.getContextConfiguration().getConfigYml());
 
-
-        AssertUtils.assertNotNull(this.configuration.getMetricsXmlConfiguration(), "Metrics xml not available");
+        AssertUtils.assertNotNull(this.getContextConfiguration().getMetricsXml(), "Metrics xml not available");
         AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
         for (InstanceInfo instanceInfo : instances.getInstances()) {
-            RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, instanceInfo, instances.getQueueGroups());
+            RabbitMQMonitorTask task = new RabbitMQMonitorTask(serviceProvider, this.getContextConfiguration(), instanceInfo, instances.getQueueGroups());
             AssertUtils.assertNotNull(instanceInfo.getDisplayName(), "The displayName can not be null");
             serviceProvider.submit((String) instanceInfo.getDisplayName(), task);
         }
     }
 
-    @Override
-    protected int getTaskCount() {
-        List<Map<String, String>> instances = (List<Map<String, String>>) configuration.getConfigYml().get("servers");
-        AssertUtils.assertNotNull(instances, "The 'instances' section in config.yml is not initialised");
-        return instances.size();
+    protected List<Map<String, ?>> getServers() {
+        List<Map<String, ?>> servers = (List<Map<String, ?>>) getContextConfiguration().getConfigYml().get("servers");
+        AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
+        return servers;
     }
+
 }

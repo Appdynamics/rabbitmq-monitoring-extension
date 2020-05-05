@@ -9,20 +9,22 @@ package com.appdynamics.extensions.rabbitmq.metrics;
 
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContext;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.http.HttpClientUtils;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.rabbitmq.instance.Instances;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
+import com.appdynamics.extensions.util.YmlUtils;
 import com.appdynamics.extensions.yml.YmlReader;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +36,7 @@ import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -54,7 +57,10 @@ public class OptionalMetricsCollectorTest {
     private TasksExecutionServiceProvider serviceProvider;
 
     @Mock
-    private MonitorConfiguration monitorConfiguration;
+    private MonitorContextConfiguration monitorContextConfiguration;
+
+    @Mock
+    private MonitorContext monitorContext;
 
     @Mock
     private MetricWriteHelper metricWriter;
@@ -73,7 +79,7 @@ public class OptionalMetricsCollectorTest {
 
     private OptionalMetricsCollector metricsCollectorTask;
 
-    public static final Logger logger = Logger.getLogger(OptionalMetricsCollector.class);
+    public static final Logger logger = ExtensionsLoggerFactory.getLogger(OptionalMetricsCollector.class);
 
     private Instances instances = initialiseInstances(YmlReader.readFromFile(new File("src/test/resources/test-config.yml")));
 
@@ -81,19 +87,22 @@ public class OptionalMetricsCollectorTest {
 
     private List<Metric> metrics = new ArrayList<Metric>();
 
+    private Map nodeFilters;
 
 
     @Before
     public void before(){
 
-        Mockito.when(serviceProvider.getMonitorConfiguration()).thenReturn(monitorConfiguration);
         Mockito.when(serviceProvider.getMetricWriteHelper()).thenReturn(metricWriter);
         Mockito.when(stat.getAlias()).thenReturn("FederationLinks");
         Mockito.when(stat.getUrl()).thenReturn("/api/federation-links");
+        Mockito.when(monitorContextConfiguration.getContext()).thenReturn(monitorContext);
 
-        dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration));
+        nodeFilters = (Map) YmlUtils.getNestedObject(monitorContextConfiguration.getConfigYml(), "filter", "nodes");
 
-        metricsCollectorTask = Mockito.spy(new OptionalMetricsCollector(stat, monitorConfiguration, instances.getInstances()[0], metricWriter, dataParser, "true", phaser));
+        dataParser = Mockito.spy(new MetricDataParser("", monitorContextConfiguration, nodeFilters));
+
+        metricsCollectorTask = Mockito.spy(new OptionalMetricsCollector(stat, monitorContextConfiguration.getContext(), instances.getInstances()[0], metricWriter, dataParser, "true", phaser));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
         PowerMockito.mockStatic(HttpClientUtils.class);
@@ -118,7 +127,7 @@ public class OptionalMetricsCollectorTest {
     public void checkReturnsFederationStatusWhenAvailable() throws TaskExecutionException {
         expectedValueMap = new HashMap<String, String>();
         initExpectedFederationMetrics();
-        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorConfiguration).getHttpClient();
+        Mockito.doReturn(Mockito.mock(CloseableHttpClient.class)).when(monitorContext).getHttpClient();
         metricsCollectorTask.run();
         for(Metric metric: metricsCollectorTask.getMetrics()) {
 

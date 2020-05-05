@@ -7,13 +7,14 @@
 
 package com.appdynamics.extensions.rabbitmq.metrics;
 
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.MetricConfig;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.slf4j.Logger;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ import java.util.Map;
 
 public class OverviewMetricParser {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OverviewMetricParser.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(OverviewMetricParser.class);
 
     private Stat stat;
 
@@ -46,7 +47,7 @@ public class OverviewMetricParser {
                 clusterNode = overview.get("node");
             }
             if (clusterNode != null) {
-                String clusterName = clusterNode.getTextValue();
+                String clusterName = clusterNode.textValue();
                 String prefix = "Clusters|" + clusterName + "|";
 
                 //Queue Totals
@@ -93,7 +94,7 @@ public class OverviewMetricParser {
                 Map<String, String> propertiesMap = oMapper.convertValue(field, Map.class);
                 JsonNode valueNode = node.get(field.getAttr());
                 if (valueNode != null) {
-                    metrics.add(new Metric(field.getAlias(), String.valueOf(valueNode.getIntValue()), metricPrefix + field.getAlias(), propertiesMap));
+                    metrics.add(new Metric(field.getAlias(), String.valueOf(valueNode.intValue()), metricPrefix + field.getAlias(), propertiesMap));
 
                 }
             }

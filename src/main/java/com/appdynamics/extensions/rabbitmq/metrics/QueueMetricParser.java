@@ -7,7 +7,9 @@
 
 package com.appdynamics.extensions.rabbitmq.metrics;
 
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContext;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.MetricConfig;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
@@ -15,10 +17,10 @@ import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStat;
 import com.appdynamics.extensions.rabbitmq.queueGroup.GroupStatTracker;
 import com.appdynamics.extensions.rabbitmq.queueGroup.QueueGroup;
 import com.appdynamics.extensions.util.StringUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.slf4j.Logger;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -29,7 +31,7 @@ import java.util.Map;
 
 public class QueueMetricParser {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(QueueMetricParser.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(QueueMetricParser.class);
 
     private Stat stat;
 
@@ -37,15 +39,18 @@ public class QueueMetricParser {
 
     private QueueGroup[] queueGroups;
 
-    private MonitorConfiguration configuration;
+    private Map queueFilters;
+
+    private MonitorContext context;
 
     private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
-    public QueueMetricParser(Stat stat, MonitorConfiguration configuration, String metricPrefix, QueueGroup[] queueGroups) {
+    public QueueMetricParser(Stat stat, MonitorContext context, String metricPrefix, QueueGroup[] queueGroups, Map queueFilters) {
         this.stat = stat;
         this.metricPrefix = metricPrefix;
         this.queueGroups = queueGroups;
-        this.configuration = configuration;
+        this.queueFilters = queueFilters;
+        this.context = context;
     }
 
     /**
@@ -90,7 +95,7 @@ public class QueueMetricParser {
                         if (vHost.equals("/")) {
                             vHost = "Default";
                         }
-                        if (!util.isIncluded(configuration, qName, stat)) {
+                        if (!util.isIncluded(queueFilters, qName, stat)) {
                             logger.info("Skipping queue name " + qName + " as it matches exclude queue name regex");
                             continue;
                         } else {

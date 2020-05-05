@@ -7,14 +7,15 @@
 
 package com.appdynamics.extensions.rabbitmq.metrics;
 
-import com.appdynamics.extensions.TaskInputArgs;
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.Constants;
+import com.appdynamics.extensions.conf.MonitorContext;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.rabbitmq.instance.InstanceInfo;
 import com.appdynamics.extensions.util.YmlUtils;
-import org.codehaus.jackson.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -23,15 +24,15 @@ import java.util.Map;
 
 public class MetricsCollectorUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(MetricsCollectorUtil.class);
+    private static final Logger logger = ExtensionsLoggerFactory.getLogger(MetricsCollectorUtil.class);
 
     protected Map<String,String> getUrlParametersMap(InstanceInfo info) {
         Map<String,String> map = new HashMap<String, String>();
-        map.put(TaskInputArgs.HOST, info.getHost());
-        map.put(TaskInputArgs.PORT, info.getPort().toString());
-        map.put(TaskInputArgs.USER, info.getUsername());
-        map.put(TaskInputArgs.PASSWORD, info.getPassword());
-        map.put(TaskInputArgs.USE_SSL, info.getUseSSL().toString());
+        map.put(Constants.HOST, info.getHost());
+        map.put(Constants.PORT, info.getPort().toString());
+        map.put(Constants.USER, info.getUsername());
+        map.put(Constants.PASSWORD, info.getPassword());
+        map.put(Constants.USE_SSL, info.getUseSSL().toString());
         checkForEnvironmentsOverride(map,info.getDisplayName());
         return map;
 
@@ -39,11 +40,11 @@ public class MetricsCollectorUtil {
 
     private void checkForEnvironmentsOverride(Map<String, String> map, String displayName) {
         String[] keys = new String[]{
-                TaskInputArgs.HOST,
-                TaskInputArgs.PORT,
-                TaskInputArgs.USER,
-                TaskInputArgs.PASSWORD,
-                TaskInputArgs.USE_SSL
+                Constants.HOST,
+                Constants.PORT,
+                Constants.USER,
+                Constants.PASSWORD,
+                Constants.USE_SSL
         };
         for (String key:keys) {
             map.put(key, System.getProperty("APPD_RABBITMQ_ENV_" + key.toUpperCase(), map.get(key)));
@@ -54,7 +55,7 @@ public class MetricsCollectorUtil {
     protected String getStringValue(String propName, JsonNode node) {
         JsonNode jsonNode = node.get(propName);
         if (jsonNode != null) {
-            return jsonNode.getTextValue();
+            return jsonNode.textValue();
         }
         return null;
     }
@@ -67,7 +68,7 @@ public class MetricsCollectorUtil {
     protected Boolean getBooleanValue(String propName, JsonNode node) {
         JsonNode jsonNode = node.get(propName);
         if (jsonNode != null) {
-            return jsonNode.getBooleanValue();
+            return jsonNode.booleanValue();
         }
         return null;
     }
@@ -77,10 +78,10 @@ public class MetricsCollectorUtil {
             JsonNode jsonNode = node.get(propName);
             if (jsonNode != null) {
                 try {
-                    return jsonNode.getBigIntegerValue();
+                    return jsonNode.bigIntegerValue();
                 } catch (Exception e) {
                     logger.warn("Cannot get the int value of the property "
-                            + propName + " value is " + jsonNode.getTextValue());
+                            + propName + " value is " + jsonNode.textValue());
                 }
             }
         }
@@ -145,9 +146,8 @@ public class MetricsCollectorUtil {
         }
     }
 
-    protected boolean isIncluded(MonitorConfiguration config, String entityName, Stat stat) {
+    protected boolean isIncluded(Map filter, String entityName, Stat stat) {
 
-            Map filter = getFilter(config, stat);
             if (isIncluded(filter, entityName)) {
                 return true;
             } else {
@@ -156,12 +156,6 @@ public class MetricsCollectorUtil {
                 return false;
             }
 
-    }
-
-    private Map getFilter(MonitorConfiguration config, Stat stat) {
-
-        Map filter = (Map) YmlUtils.getNestedObject(config.getConfigYml(), "filter", stat.getFilterName());
-        return filter;
     }
 
     //Apply the filter

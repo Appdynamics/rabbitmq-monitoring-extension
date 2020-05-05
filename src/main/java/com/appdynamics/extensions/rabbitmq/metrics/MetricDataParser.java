@@ -7,15 +7,16 @@
 
 package com.appdynamics.extensions.rabbitmq.metrics;
 
-import com.appdynamics.extensions.conf.MonitorConfiguration;
+import com.appdynamics.extensions.conf.MonitorContext;
+import com.appdynamics.extensions.conf.MonitorContextConfiguration;
+import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.rabbitmq.config.input.MetricConfig;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
 import com.appdynamics.extensions.util.StringUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -24,18 +25,21 @@ import java.util.Map;
 
 public class MetricDataParser {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(MetricDataParser.class);
+    private static final org.slf4j.Logger logger = ExtensionsLoggerFactory.getLogger(MetricDataParser.class);
 
     private String metricPrefix;
 
-    private MonitorConfiguration configuration;
+    private MonitorContextConfiguration configuration;
+
+    private Map nodeFilters;
 
     private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
 
-    public MetricDataParser(String metricPrefix, MonitorConfiguration configuration){
+    public MetricDataParser(String metricPrefix, MonitorContextConfiguration configuration, Map nodeFilters){
         this.metricPrefix = metricPrefix;
         this.configuration = configuration;
+        this.nodeFilters = nodeFilters;
     }
 
 
@@ -57,7 +61,7 @@ public class MetricDataParser {
             for (JsonNode node : nodes) {
                 String name = util.getStringValue("name", node);
                 if (name != null) {
-                    if(!util.isIncluded(configuration, name, stat)){
+                    if(!util.isIncluded(nodeFilters, name, stat)){
                         logger.info("Skipping node name " + name + " as it is not present in the include filter");
                         continue;
                     }
