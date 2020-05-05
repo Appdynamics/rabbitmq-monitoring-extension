@@ -8,6 +8,7 @@
 package com.appdynamics.extensions.rabbitmq;
 
 import com.appdynamics.extensions.ABaseMonitor;
+import com.appdynamics.extensions.Constants;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.rabbitmq.config.input.Stat;
@@ -71,8 +72,8 @@ public class RabbitMQMonitor extends ABaseMonitor {
                 else if(!Strings.isNullOrEmpty((String) instance.get("encryptedPassword"))){
                     try {
                         Map<String, String> args = Maps.newHashMap();
-                        args.put("encryptedPassword", (String)instance.get("encryptedPassword"));
-                        args.put("encryptionKey", (String)configYml.get("encryptionKey"));
+                        args.put(Constants.ENCRYPTED_PASSWORD, (String)instance.get("encryptedPassword"));
+                        args.put(Constants.ENCRYPTION_KEY, (String)configYml.get("encryptionKey"));
                         logger.debug("Decrypting the encrypted password");
                         info.setPassword(CryptoUtils.getPassword(args));
 
@@ -141,10 +142,8 @@ public class RabbitMQMonitor extends ABaseMonitor {
 
     protected List<Map<String, ?>> getServers() {
         List<Map<String, ?>> servers = (List<Map<String, ?>>) getContextConfiguration().getConfigYml().get("servers");
-        List<Map<String, ?>> oneServer = new ArrayList<>();
-        oneServer.add(servers.get(0));
-        AssertUtils.assertNotNull(oneServer, "The 'instances' section in config.yml is not initialised");
-        return oneServer;
+        AssertUtils.assertNotNull(servers, "The 'servers' section in config.yml is not initialised");
+        return servers;
     }
 
 }
