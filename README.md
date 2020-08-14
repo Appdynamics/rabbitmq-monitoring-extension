@@ -138,8 +138,8 @@ Always feel free to fork and contribute any changes directly here on [GitHub](ht
 ### Version
 |          Name            |  Version   |
 |--------------------------|------------|
-|Extension Version         |2.0.3       |
+|Extension Version         |2.0.4       |
 |Controller Compatibility  |4.5 or Later|
 |Machine Agent Version     |4.5.13+     |
 |Product Tested On         |3.2.0+      |
-|Last Update               |03/021/2018 |
+|Last Update               |08/14/2020 |

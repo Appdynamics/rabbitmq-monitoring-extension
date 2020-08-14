@@ -224,7 +224,7 @@ public class MetricsCollectorTest {
     }
 
     private void initExpectedSummaryMetrics() {
-        expectedValueMap.put("|Summary|Channels", "2");
+        expectedValueMap.put("Summary|Channels", "2");
         expectedValueMap.put("Summary|Consumers", "2");
         expectedValueMap.put("Summary|Queues", "2");
         expectedValueMap.put("Summary|Messages|Delivered (Total)", "20");
@@ -232,7 +232,7 @@ public class MetricsCollectorTest {
         expectedValueMap.put("Summary|Messages|Redelivered", "25");
         expectedValueMap.put("Summary|Messages|Available", "36");
         expectedValueMap.put("Summary|Messages|Pending Acknowledgements", "50");
-        expectedValueMap.put("|HeartBeat","1");
+        expectedValueMap.put("HeartBeat","1");
     }
 
 

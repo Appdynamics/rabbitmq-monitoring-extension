@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##2.0.4 - Aug 14, 2020
+1. Fixed metric path issue for Heartbeat, Summary and Node running metrics
+
 ##2.0.3 - Apr 30, 2020
 1. Moved to commons 2.2.3
 
