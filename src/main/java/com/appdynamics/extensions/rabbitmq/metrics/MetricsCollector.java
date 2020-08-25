@@ -119,7 +119,7 @@ public class MetricsCollector implements Runnable {
                     }
                 }
             }
-            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "|HeartBeat"));
+            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ONE), dataParser.getMetricPrefix() + "HeartBeat"));
             if (metrics != null && metrics.size() > 0) {
                 logger.debug("Printing Node, Queue, Channel & Overview metrics: " + metrics.size());
                 metricWriteHelper.transformAndPrintMetrics(metrics);
@@ -127,7 +127,7 @@ public class MetricsCollector implements Runnable {
         }
         catch(Exception e){
             logger.error("MetricsCollector error: " , e);
-            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + "|HeartBeat"));
+            metrics.add(new Metric("HeartBeat", String.valueOf(BigInteger.ZERO), dataParser.getMetricPrefix() + "HeartBeat"));
         }finally {
             logger.debug("MetricsCollector Phaser arrived for {}", instanceInfo.getDisplayName());
             phaser.arriveAndDeregister();

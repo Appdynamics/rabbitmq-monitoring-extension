@@ -113,7 +113,7 @@ public class ChannelMetricParser {
         } else {
             channelCount = 0;
         }
-        return new Metric("Channels", String.valueOf(channelCount), metricPrefix + "|Summary|Channels");
+        return new Metric("Channels", String.valueOf(channelCount), metricPrefix + "Summary|Channels");
 
     }
 

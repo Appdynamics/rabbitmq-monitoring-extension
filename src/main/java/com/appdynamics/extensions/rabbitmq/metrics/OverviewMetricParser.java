@@ -67,7 +67,7 @@ public class OverviewMetricParser {
                             runningCount++;
                         }
                     }
-                    metrics.add(new Metric("Running", String.valueOf(runningCount), nodePrefix + "Running"));
+                    metrics.add(new Metric("Running", String.valueOf(runningCount), metricPrefix + nodePrefix + "Running"));
 
                     if (runningCount < nodes.size()) {
                         metrics.add(new Metric("Cluster Health", String.valueOf(BigInteger.ZERO), metricPrefix + prefix + "Cluster Health"));
