@@ -100,7 +100,7 @@ public class MetricsCollectorUtil {
         if(Boolean.valueOf(isBool)){
             metricValue = getNumericValueForBoolean(value, node, -1);
         }else{
-            metricValue = getBigIntegerValue(value, node, 0);
+            metricValue = getBigIntegerValue(value, node);
         }
         return metricValue;
     }
@@ -108,6 +108,9 @@ public class MetricsCollectorUtil {
 
     protected BigInteger getBigIntegerValue(String propName, JsonNode node, int defaultVal) {
         BigInteger value = getBigIntegerValue(propName, node);
+        if(value == null){
+            return BigInteger.valueOf(defaultVal);
+        }
         return value;
     }
 
