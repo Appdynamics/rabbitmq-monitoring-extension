@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##2.0.5 - Oct 14, 2020
+1. Fixed issue for writeTotalConsumerCount value
+
 ##2.0.4 - Aug 14, 2020
 1. Fixed metric path issue for Heartbeat, Summary and Node running metrics
 
