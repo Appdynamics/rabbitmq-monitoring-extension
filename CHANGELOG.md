@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##2.0.5 - Jan 11, 2021
+1. Updated extension to appd-exts-commons 2.2.4
+
 ##2.0.4 - Aug 14, 2020
 1. Fixed metric path issue for Heartbeat, Summary and Node running metrics
 
