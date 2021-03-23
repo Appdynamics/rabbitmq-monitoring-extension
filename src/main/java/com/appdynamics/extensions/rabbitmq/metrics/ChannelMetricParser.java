@@ -30,12 +30,15 @@ public class ChannelMetricParser {
 
     private String metricPrefix;
 
+    private Map nodeFilters;
+
     private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
 
-    public ChannelMetricParser(Stat stat, String metricPrefix) {
+    public ChannelMetricParser(Stat stat, String metricPrefix, Map nodeFilters) {
         this.stat = stat;
         this.metricPrefix = metricPrefix;
+        this.nodeFilters = nodeFilters;
     }
 
     /**
@@ -57,8 +60,9 @@ public class ChannelMetricParser {
                     String prefix = "Nodes|" + name;
 
                     //Nodes|$node|Messages
-                    metrics.addAll(addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels, oMapper));
-
+                    if(util.isIncluded(nodeFilters,name, stat)){
+                        metrics.addAll(addChannelMessageProps(metricPrefix + prefix + "|Messages", nodeChannels, oMapper));
+                    }
                 }
 
             }
@@ -74,7 +78,6 @@ public class ChannelMetricParser {
 
         Map<String, BigInteger> valueMap = new HashMap<String, BigInteger>();
         Map<String, MetricConfig> propertiesMap = new HashMap<String, MetricConfig>();
-
 
         for (JsonNode channel : nodeChannels) {
             JsonNode msgStats = channel.get("message_stats");

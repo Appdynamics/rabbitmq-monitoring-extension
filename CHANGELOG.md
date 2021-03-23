@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##2.0.6 - Mar 23, 2021
+1. Fixed issue for node filter
+
 ##2.0.5 - Jan 11, 2021
 1. Updated extension to appd-exts-commons 2.2.4
 

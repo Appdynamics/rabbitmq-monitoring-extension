@@ -107,7 +107,7 @@ public class MetricsCollectorTest {
         dataParser = Mockito.spy(new MetricDataParser("", monitorConfiguration, nodeFilters));
 
         metricsCollectorTask = Mockito.spy(new MetricsCollector(stat.getStats()[0],monitorConfiguration.getContext(), instances.getInstances()[0], metricWriter,
-                 "true", dataParser, instances.getQueueGroups(), queueFilters, phaser));
+                 "true", dataParser, instances.getQueueGroups(), queueFilters, nodeFilters, phaser));
         metricsCollectorTask.setMetricsCollectorUtil(metricsCollectorUtil);
 
         PowerMockito.mockStatic(HttpClientUtils.class);

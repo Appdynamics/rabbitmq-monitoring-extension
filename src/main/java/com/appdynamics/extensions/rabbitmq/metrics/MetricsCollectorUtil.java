@@ -158,6 +158,18 @@ public class MetricsCollectorUtil {
 
     }
 
+    protected boolean isIncludedCheckForOtherNodeMetric(Map filter, String entityName) {
+
+        if (isIncluded(filter, entityName)) {
+            return true;
+        } else {
+            logger.debug("The filter {} didnt match for entityName {}"
+                    , filter, entityName);
+            return false;
+        }
+
+    }
+
     //Apply the filter
     private boolean isIncluded(Map filter, String entityName) {
         if (filter != null) {
