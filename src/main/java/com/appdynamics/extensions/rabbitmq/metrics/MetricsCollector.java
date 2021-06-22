@@ -54,6 +54,8 @@ public class MetricsCollector implements Runnable {
 
     private Map queueFilters;
 
+    private Map nodeFilters;
+
     private Phaser phaser;
 
 
@@ -68,7 +70,7 @@ public class MetricsCollector implements Runnable {
     }
 
     public MetricsCollector(Stat stat, MonitorContext context, InstanceInfo instanceInfo, MetricWriteHelper metricWriteHelper,
-                            String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups, Map queueFilters, Phaser phaser)
+                            String overviewMetricFlag, MetricDataParser dataParser, QueueGroup[] queueGroups, Map queueFilters, Map  nodeFilters, Phaser phaser)
     {
         this.stat = stat;
         this.context = context;
@@ -78,6 +80,7 @@ public class MetricsCollector implements Runnable {
         this.dataParser = dataParser;
         this.queueGroups = queueGroups;
         this.queueFilters = queueFilters;
+        this.nodeFilters = nodeFilters;
         this.phaser = phaser;
     }
 
@@ -108,10 +111,10 @@ public class MetricsCollector implements Runnable {
                     }
 
                     if (childStat.getAlias().equalsIgnoreCase("Queues")) {
-                        QueueMetricParser queueParser = new QueueMetricParser(childStat, context, dataParser.getMetricPrefix(), queueGroups, queueFilters);
+                        QueueMetricParser queueParser = new QueueMetricParser(childStat, context, dataParser.getMetricPrefix(), queueGroups, queueFilters, nodeFilters);
                         metrics.addAll(queueParser.parseQueueData((ArrayNode) json, nodeDataJson, objectMapper));
                     } else if (childStat.getAlias().equalsIgnoreCase("Channels")) {
-                        ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix());
+                        ChannelMetricParser channelParser = new ChannelMetricParser(childStat, dataParser.getMetricPrefix(), nodeFilters);
                         metrics.addAll(channelParser.parseChannelData((ArrayNode) json, nodeDataJson, objectMapper));
                     } else if (childStat.getAlias().equalsIgnoreCase("Clusters")) {
                         OverviewMetricParser overviewParser = new OverviewMetricParser(childStat, dataParser.getMetricPrefix());

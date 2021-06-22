@@ -41,15 +41,18 @@ public class QueueMetricParser {
 
     private Map queueFilters;
 
+    private Map nodeFilters;
+
     private MonitorContext context;
 
     private MetricsCollectorUtil util = new MetricsCollectorUtil();
 
-    public QueueMetricParser(Stat stat, MonitorContext context, String metricPrefix, QueueGroup[] queueGroups, Map queueFilters) {
+    public QueueMetricParser(Stat stat, MonitorContext context, String metricPrefix, QueueGroup[] queueGroups, Map queueFilters, Map nodeFilters) {
         this.stat = stat;
         this.metricPrefix = metricPrefix;
         this.queueGroups = queueGroups;
         this.queueFilters = queueFilters;
+        this.nodeFilters = nodeFilters;
         this.context = context;
     }
 
@@ -71,7 +74,9 @@ public class QueueMetricParser {
                         String prefix = "Nodes|" + name;
 
                         //Nodes|$node|Messages
-                        metrics.addAll(addQueueProps(metricPrefix + prefix, nodeQueues));
+                        if(util.isIncludedCheckForOtherNodeMetric(nodeFilters,name)){
+                            metrics.addAll(addQueueProps(metricPrefix + prefix, nodeQueues));
+                        }
                     }
 
                 }

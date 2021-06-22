@@ -77,7 +77,7 @@ public class RabbitMQMonitorTask implements AMonitorTaskRunnable{
 
                     Map queueFilters = (Map) YmlUtils.getNestedObject(configuration.getConfigYml(), "filter", "queues");
                     MetricsCollector metricsCollectorTask = new MetricsCollector(stat, configuration.getContext(), instanceInfo, metricWriter,
-                             endpointFlagsMap.get("overview"), dataParser, queueGroups, queueFilters, phaser);
+                             endpointFlagsMap.get("overview"), dataParser, queueGroups, queueFilters, nodeFilters, phaser);
                     configuration.getContext().getExecutorService().execute("MetricCollectorTask", metricsCollectorTask);
                     logger.debug("Registering MetricCollectorTask phaser for {}", displayName);
                 }else {
