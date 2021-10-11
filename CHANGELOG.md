@@ -1,5 +1,8 @@
 # AppDynamics Extensions RabbitMQ CHANGELOG
 
+##2.0.7 - Oct 11, 2021
+1. Updated to appd-exts-commons 2.2.6
+
 ##2.0.6 - Mar 23, 2021
 1. Fixed issue for node filter
 2. Fixed issue for writeTotalConsumerCount value

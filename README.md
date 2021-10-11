@@ -136,9 +136,9 @@ Always feel free to fork and contribute any changes directly here on [GitHub](ht
 ### Version
 |          Name            |  Version   |
 |--------------------------|------------|
-|Extension Version         |2.0.6       |
+|Extension Version         |2.0.7       |
 |Product Tested On         |3.2.0+      |
-|Last Update               |23/03/2021 |
+|Last Update               |11/10/2021 |
 |Changes list              |[ChangeLog](https://github.com/Appdynamics/rabbitmq-monitoring-extension/blob/master/CHANGELOG.md)|
 
 **Note**: While extensions are maintained and supported by customers under the open-source licensing model, they interact with agents and Controllers that are subject to [AppDynamics’ maintenance and support policy](https://docs.appdynamics.com/latest/en/product-and-release-announcements/maintenance-support-for-software-versions). Some extensions have been tested with AppDynamics 4.5.13+ artifacts, but you are strongly recommended against using versions that are no longer supported.
